@@ -1,0 +1,19 @@
+Package: dalextutorial
+Type: Package
+Title: Explanatory model analysis with DALEX
+Version: 0.1.0
+Author: somayeh koohborfardhaghighi, Willy Tadema
+Maintainer: Willy Tadema <friesewoudloper@gmail.com>
+Description: Tutorial on explaining machine learning models with R and DALEX.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    learnr
+Imports: 
+    gradethis (>= 0.1.0.9004),
+    DALEX,
+    ranger,
+    rms
+Remotes: 
+    rstudio-education/gradethis
