@@ -1,11 +1,16 @@
 ---
 title: "DALEX"
-output: learnr::tutorial
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
 runtime: shiny_prerendered
+description: "Learn to explore and explain supervised machine learning models with DALEX."
 ---
 
 ```{r setup, include=FALSE, message=FALSE, results='hide'}
 library(learnr)
+library(gradethis)
 library(DALEX)
 library(ranger)
 library(rms)
@@ -66,7 +71,7 @@ The variable `survived` specifies whether the person has survived the sinking: Y
 
 In the next steps we will create and explain a model that predicts whether a person will survive.
 
-## Model & Explainer
+## Model & explainer
 
 ### Create a Random Forest model
 Insert the name of the target variable in the code chunk and run the code to train a Random Forest model. You can click on the **Solution** button to get help.
@@ -76,6 +81,7 @@ library(ranger)
 set.seed(123)
 model_ranger <- ranger(___ ~ ., data = titanic_imputed,
                           classification = TRUE, probability = TRUE)
+model_ranger
 ```
 
 ```{r model-titanic-solution}
@@ -83,6 +89,7 @@ library(ranger)
 set.seed(123)
 model_ranger <- ranger(survived ~ ., data = titanic_imputed,
                           classification = TRUE, probability = TRUE)
+model_ranger
 ```
 
 ### Create an explainer
@@ -113,19 +120,23 @@ After the explainer is created, you can use it to request base information about
 exp_ranger$model_info
 ```
 
-You can also extract the features, true outcomes and predictions.
+HIER NOG WAT TUSSEN OVER DE STRUCTUUR VAN HET EXPLAINER OBJECT?
 
-```{r more-info-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=4}
-head(exp_ranger$data, n = 3)
-head(exp_ranger$y, n = 3)
-head(exp_ranger$y_hat, n = 3)
+Change this code chunk so it no longer returns the true outcomes, but the predicted probabilities. 
+
+```{r more-info-titanic, exercise=TRUE, exercise.eval=FALSE}
+head(exp_ranger$y)
+```
+
+```{r more-info-titanic-solution}
+head(exp_ranger$y_hat)
 ```
 
 ### Create another model with accompanying explainer
 
 Let's also train a logistic regression model with splines, so we can choose the best model. Again create an explainer, so we can later on compare the two models not only on accuracy, but also explainability.
 
-```{r rms-titanic, exercise=TRUE, exercise.eval=FALSE}
+```{r rms-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=9}
 library(rms)
 set.seed(123)
 model_rms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
@@ -156,3 +167,26 @@ exp_rms$___
 ```{r rms-model-info-titanic-solution}
 exp_rms$model_info
 ```
+
+## Model performance
+
+Let's see how both models perform on the training set using the `model_performance` function. Of course, you should evaluate performance on a testing dataset. However, to keep this tutorial simple, we'll skip that part for now.
+
+```{r mp-ranger-titanic, exercise=TRUE, exercise.eval=TRUE, exercise.lines=3}
+model_performance(exp_ranger)
+```
+
+<div id="mp-ranger-titanic-hint">
+**Hint:** You may want to compare the output of `model_performance(exp_ranger)` to `model_performance(exp_rms)`.
+</div>
+
+```{r letter-a, echo=FALSE}
+question("Which model we trained in the previous section performs better?",
+  answer("Random forest model", correct = TRUE),
+  answer("Logistic model with splines"),
+  answer("Both models perform equally")
+)
+```
+
+
+
