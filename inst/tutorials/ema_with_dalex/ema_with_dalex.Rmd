@@ -17,22 +17,22 @@ library(rms)
 
 knitr::opts_chunk$set(echo = FALSE, exercise.checker = gradethis::grade_learnr)
 
-set.seed(123)
-model_ranger <- ranger(survived ~ ., data = titanic_imputed,
+set.seed(1313)
+titanic_rf <- ranger(survived ~ ., data = titanic_imputed,
                           classification = TRUE, probability = TRUE)
-
-exp_ranger <- explain(model_ranger,
+exp_rf <- explain(titanic_rf,
                       data = titanic_imputed[, 1:7],
                       y = titanic_imputed$survived,
                       label = "Random Forest")
+mp_rf <- model_performance(exp_rf)
 
-set.seed(123)
-model_rms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
-                 data = titanic_imputed)
-exp_rms <- explain(model_rms,
+titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
+                   data = titanic_imputed)
+exp_lms <- explain(titanic_lms,
                    data = titanic_imputed,
                    y = titanic_imputed$survived,
                    label = "Logistic with splines")
+mp_lms <- model_performance(exp_lms)
 ```
 
 ## Welcome
@@ -73,23 +73,22 @@ In the next steps we will create and explain a model that predicts whether a per
 
 ## Model & explainer
 
-### Create a Random Forest model
+### Create a random forest model
 Insert the name of the target variable in the code chunk and run the code to train a Random Forest model. You can click on the **Solution** button to get help.
 
-```{r model-titanic, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
+```{r rf-titanic, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
 library(ranger)
-set.seed(123)
-model_ranger <- ranger(___ ~ ., data = titanic_imputed,
-                          classification = TRUE, probability = TRUE)
-model_ranger
+set.seed(1313)
+titanic_rf <- ranger(___ ~ ., data = titanic_imputed,
+                     classification = TRUE, probability = TRUE)
+titanic_rf
 ```
 
-```{r model-titanic-solution}
+```{r rf-titanic-solution}
 library(ranger)
-set.seed(123)
-model_ranger <- ranger(survived ~ ., data = titanic_imputed,
-                          classification = TRUE, probability = TRUE)
-model_ranger
+titanic_rf <- ranger(survived ~ ., data = titanic_imputed,
+                     classification = TRUE, probability = TRUE)
+titanic_rf
 ```
 
 ### Create an explainer
@@ -98,38 +97,38 @@ Create a model explainer using the `explain` function from the `DALEX` package.
 
 The first argument to the function is the model you want to explain. It is the model you created in the previous step. The second argument is the data frame with the features, and the third a numeric vector with the true outcome of the target variable. The last one is the name of the model. It can be anything you like.
 
-```{r explain-titanic, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
+```{r explain-rf-titanic, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
 library(DALEX)
-exp_ranger <- explain(___,
-                      data = titanic_imputed[, 1:7],
-                      y = ___$survived,
-                      label = "Random Forest")
+exp_rf <- explain(___,
+                  data = titanic_imputed[, 1:7],
+                  y = ___$survived,
+                  label = "Random Forest")
 ```
 
-```{r explain-titanic-solution}
+```{r explain-rf-titanic-solution}
 library(DALEX)
-exp_ranger <- explain(model_ranger,
-                      data = titanic_imputed[, 1:7],
-                      y = titanic_imputed$survived,
-                      label = "Random Forest")
+exp_rf <- explain(titanic_rf,
+                  data = titanic_imputed[, 1:7],
+                  y = titanic_imputed$survived,
+                  label = "Random Forest")
 ```
 
 After the explainer is created, you can use it to request base information about the model.
 
-```{r model-info-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=3}
-exp_ranger$model_info
+```{r rf-model-info-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=3}
+exp_rf$model_info
 ```
 
 HIER NOG WAT TUSSEN OVER DE STRUCTUUR VAN HET EXPLAINER OBJECT?
 
 Change this code chunk so it no longer returns the true outcomes, but the predicted probabilities. 
 
-```{r more-info-titanic, exercise=TRUE, exercise.eval=FALSE}
-head(exp_ranger$y)
+```{r rf-preds-titanic, exercise=TRUE, exercise.eval=FALSE}
+head(exp_rf$y)
 ```
 
-```{r more-info-titanic-solution}
-head(exp_ranger$y_hat)
+```{r rf-preds-titanic-solution}
+head(exp_rf$y_hat)
 ```
 
 ### Create another model with accompanying explainer
@@ -138,10 +137,9 @@ Let's also train a logistic regression model with splines, so we can choose the 
 
 ```{r rms-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=9}
 library(rms)
-set.seed(123)
-model_rms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
-                 data = titanic_imputed)
-exp_rms <- explain(___,
+titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
+                   data = titanic_imputed)
+exp_lms <- explain(___,
                    data = ___,
                    y = ___,
                    label = "Logistic with splines")
@@ -150,43 +148,61 @@ exp_rms <- explain(___,
 ```{r rms-titanic-solution}
 library(rms)
 set.seed(123)
-model_rms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
-                 data = titanic_imputed)
-exp_rms <- explain(model_rms,
+titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
+                   data = titanic_imputed)
+exp_lms <- explain(titanic_lms,
                    data = titanic_imputed,
                    y = titanic_imputed$survived,
                    label = "Logistic with splines")
 ```
 
-Finally extract the model information from the explainer.
+Extract the model base information from the explainer.
 
 ```{r rms-model-info-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=3}
-exp_rms$___
+exp_lms$___
 ```
 
 ```{r rms-model-info-titanic-solution}
-exp_rms$model_info
+exp_lms$model_info
 ```
 
 ## Model performance
 
 Let's see how both models perform on the training set using the `model_performance` function. Of course, you should evaluate performance on a testing dataset. However, to keep this tutorial simple, we'll skip that part for now.
 
-```{r mp-ranger-titanic, exercise=TRUE, exercise.eval=TRUE, exercise.lines=3}
-model_performance(exp_ranger)
+```{r mp-rf-titanic, exercise=TRUE, exercise.eval=TRUE, exercise.lines=3}
+model_performance(exp_rf)
 ```
 
-<div id="mp-ranger-titanic-hint">
-**Hint:** You may want to compare the output of `model_performance(exp_ranger)` to `model_performance(exp_rms)`.
+<div id="mp-rf-titanic-hint">
+**Hint:** You may want to compare the output of `model_performance(exp_rf)` to `model_performance(exp_lms)`.
 </div>
 
-```{r letter-a, echo=FALSE}
-question("Which model we trained in the previous section performs better?",
+```{r mp-titanic, echo=FALSE}
+question("Which model we trained in the previous section seems to perform better?",
   answer("Random forest model", correct = TRUE),
   answer("Logistic model with splines"),
   answer("Both models perform equally")
 )
 ```
+
+We can visualize and compare model performance using the `plot` function. By providing an `geom` argument we can specify how we want to summarize residuals. Valid values are `"prc"`, `"roc"`, `"ecdf"`, `"boxplot"`, `"gain"`, `"lift"` and `"histogram"`.
+
+Adjust the code below so that an _Receiver Operator Characteristic_ (ROC) curve is created, and we can verify that the random forest model has a larger _Area Under the Curve_ (AUC) and thus performs better.
+
+```{r roc-titanic, exercise=TRUE, exercise.eval=TRUE}
+mp_rf <- model_performance(exp_rf)
+mp_lms <- model_performance(exp_lms)
+plot(mp_rf, mp_lms, geom = "prc")
+```
+
+```{r roc-titanic-solution}
+mp_rf <- model_performance(exp_rf)
+mp_lms <- model_performance(exp_lms)
+plot(mp_rf, mp_lms, geom = "roc")
+```
+
+### Explain individual predictions
 
 
 
