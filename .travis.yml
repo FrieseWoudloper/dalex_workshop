@@ -2,6 +2,8 @@ language: r
 cache: packages
 
 r_packages:
+  - learnr
+  - DALEX
   - ranger
   - rms
 
