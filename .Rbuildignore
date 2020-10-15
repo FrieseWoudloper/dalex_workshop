@@ -1,4 +1,2 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^inst/tutorials/dalextutorial/dalextutorial\.Rmd$
-^inst/tutorials/ema_with_dalex/ema_with_dalex\.Rmd$

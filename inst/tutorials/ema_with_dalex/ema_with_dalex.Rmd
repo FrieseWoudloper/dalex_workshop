@@ -16,7 +16,9 @@ library(ranger)
 library(rms)
 
 knitr::opts_chunk$set(echo = FALSE, exercise.checker = gradethis::grade_learnr)
+```
 
+```{r objects, include=FALSE, message=FALSE, results='hide', cache = TRUE}
 set.seed(1313)
 titanic_rf <- ranger(survived ~ ., data = titanic_imputed,
                           classification = TRUE, probability = TRUE)
@@ -33,6 +35,30 @@ exp_lms <- explain(titanic_lms,
                    y = titanic_imputed$survived,
                    label = "Logistic with splines")
 mp_lms <- model_performance(exp_lms)
+
+joe <- titanic_imputed[1,]
+johnny_d <- data.frame(
+          class = factor("1st", levels = c("1st", "2nd", "3rd", 
+                     "deck crew", "engineering crew", 
+                     "restaurant staff", "victualling crew")),
+          gender = factor("male", levels = c("female", "male")),
+          age = 8, sibsp = 0, parch = 0, fare = 72,
+          embarked = factor("Southampton", levels = c("Belfast",
+                      "Cherbourg","Queenstown","Southampton")))
+
+lucy <- data.frame(
+      class = factor("1st", levels = c("1st", "2nd", "3rd", 
+                     "deck crew", "engineering crew", 
+                     "restaurant staff", "victualling crew")),
+      gender = factor("female", levels = c("female", "male")),
+      age = 18, sibsp = 0, parch = 0, fare = 70,
+      embarked = factor("Southampton", levels = c("Belfast",
+                        "Cherbourg","Queenstown","Southampton")))
+
+bd_joe <- predict_parts(exp_rf, joe, type = "break_down_interactions")
+bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down_interactions")
+sh_joe_rf <- predict_parts(exp_rf, joe, type = "shap")
+sh_joe_lms <- predict_parts(exp_lms, joe, type = "shap")
 ```
 
 ## Welcome
@@ -74,7 +100,7 @@ In the next steps we will create and explain a model that predicts whether a per
 ## Model & explainer
 
 ### Create a random forest model
-Insert the name of the target variable in the code chunk and run the code to train a Random Forest model. You can click on the **Solution** button to get help.
+Insert the name of the target variable in the code chunk and run the code to train a random forest model. You can click on the **Solution** button to get help.
 
 ```{r rf-titanic, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
 library(ranger)
@@ -131,7 +157,7 @@ head(exp_rf$y)
 head(exp_rf$y_hat)
 ```
 
-### Create another model with accompanying explainer
+### Create a logistic regression model and accompanying explainer
 
 Let's also train a logistic regression model with splines, so we can choose the best model. Again create an explainer, so we can later on compare the two models not only on accuracy, but also explainability.
 
@@ -181,7 +207,7 @@ model_performance(exp_rf)
 ```{r mp-titanic, echo=FALSE}
 question("Which model we trained in the previous section seems to perform better?",
   answer("Random forest model", correct = TRUE),
-  answer("Logistic model with splines"),
+  answer("Logistic regression model with splines"),
   answer("Both models perform equally")
 )
 ```
@@ -202,7 +228,115 @@ mp_lms <- model_performance(exp_lms)
 plot(mp_rf, mp_lms, geom = "roc")
 ```
 
-### Explain individual predictions
+## Explanations for overall model behavior
 
+## Explanations for predictions
 
+### Make predictions
+
+Let us now compare predictions that are obtained from the two different models. In particular, we compute the predicted probability of survival for Joe.
+
+Joe is a 42-year-old male who embarked in Southampton and travels third class with no parents nor siblings, and with a ticket costing a little over 7 pounds.
+
+```{r henry-titanic, exercise=TRUE, exercise.eval=FALSE}
+joe <- titanic_imputed[1,]
+joe
+```
+
+First predict the probability of Joe surviving using the random forest model.
+
+```{r pred-joe-titanic, exercise=TRUE, exercise.eval=TRUE}
+predict(exp_rf, joe)
+```
+
+<div id="pred-joe-titanic-hint">
+**Hint:** You probably want to compare the output of `predict(exp_rf, joe)` to `predict(exp_lms, joe)`.
+</div>
+
+We can also predict survival using the logistic regression model.
+
+```{r joe-titanic, echo=FALSE}
+question("Which model predicts a slightly higher probability of survival for Joe?",
+  answer("Random forest model", correct = TRUE),
+  answer("Logistic regression model with splines")
+)
+```
+
+### Create break-down plots 
+
+Both our models predict that it is not very likely that Joe will survive the sinking of the Titanic. Which characteristics of Joe were of most importance here? One way of answering this question is by creating a _break-down plot for additive attributions_. The plot is a decomposition of the model's prediction into contributions that can be attributed to different explanatory variables.
+
+```{r bd-joe-titanic, exercise=TRUE, exercise.eval=TRUE}
+bd_joe <- predict_parts(exp_rf, joe, type = "break_down_interactions")
+plot(bd_joe)
+```
+
+From the break-down profile we can see, that the fact that Joe is a man decreases his chances of survival significantly.
+
+Another passenger aboard the Titanic is Lucy. She is a 18-year-old girl who also embarked in Southampton and travels first class without parents nor siblings. Her ticket costs 70 pounds. A dataframe containing Lucy's characteristics has already been created for our convenience.
+
+```{r pred-lucy-titanic, exercise=TRUE, exercise.eval=TRUE}
+predict(exp_rf, lucy)
+```
+
+```{r pred-lucy-titanic-solution}
+bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down_interactions")
+plot(bd_lucy)
+```
+
+Our random forest model predicts that Lucy will very likely survive. Now let's answer the following question using this model and a break-down plot. Add some code to the chunk above to get the right answer.
+
+```{r lucy-titanic, echo=FALSE}
+question("Which three characteristics of Lucy have the biggest <u>positive</u> contribution to her predicted survival?",
+  answer("age = 18"),
+  answer("class = 1st", correct = TRUE),  
+  answer("embarked = Southampton"),
+  answer("fare = 70", correct = TRUE),
+  answer("gender = female", correct = TRUE),
+  answer("number of siblings aboard = 0"),
+  answer("number of parents aboard = 0")
+)
+```
+
+### Important issue with break-down plots
+
+Break-down plots are easy to understand, and they are compact. However, they can also be misleading. This is the case for models including interactions. Break-down plots only show the additive attributions. Thus the choice of the ordering of the explanatory variables in the calculation of the variable-importance measures is important. Let's illustrate this with an example.
+
+```{r bd-order-titanic, exercise=TRUE, exercise.eval=TRUE}
+bd_lucy_order <- predict_parts(exp_rf, lucy, 
+                               order = c("age", "gender", "fare", "class",
+                                         "parch", "sibsp", "embarked"))
+plot(bd_lucy_order)
+```
+
+We can see that fare&nbsp;=&nbsp;70 now has a <u>negative</u> contribution to the prediction, and that the positive contribution of class&nbsp;=&nbsp;1st has significantly increased!
+
+There are several ways of addressing the issue of the dependence of the variable-importance measure on the ordering of the explanatory variables. One approach is using SHAP, as we will see in the next section.
+
+### Create SHapley Additive exPlanations
+
+Another way to explain individual predictions is by creating _SHapley Additive exPlanations_ (SHAP). 
+
+Let's start by visualizing SHAP values for the random forest model's prediction for Joe.
+
+```{r sh-joe-rf-titanic, exercise=TRUE, exercise.eval=TRUE}
+sh_joe_rf <- predict_parts(exp_rf, joe, type = "shap")
+plot(sh_joe_rf, show_boxplots = FALSE)
+```
+
+Now also visualize Joe's SHAP values based upon the logistic regression model, so we can compare not only the predictions, but also the explanations of the two different models.
+
+```{r sh-joe-lms-titanic, exercise=TRUE, exercise.eval=FALSE}
+sh_joe_lms <- predict_parts(___, joe, type = "shap")
+plot(___, show_boxplots = FALSE)
+```
+
+```{r sh-joe-lms-titanic-solution}
+sh_joe_lms <- predict_parts(exp_lms, joe, type = "shap")
+plot(sh_joe_lms, show_boxplots = FALSE)
+```
+
+What are the most striking differences between the explanations for Joe's prediction for the two different models?
+
+### Ceteris-paribus
 

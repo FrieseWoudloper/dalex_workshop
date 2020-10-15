@@ -13,7 +13,7 @@ Suggests:
 Imports: 
     gradethis (>= 0.1.0.9004),
     DALEX,
-    ranger,
+    randomForest,
     rms
 Remotes: 
     rstudio-education/gradethis
