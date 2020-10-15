@@ -8,7 +8,7 @@ runtime: shiny_prerendered
 description: "Learn to explore and explain supervised machine learning models with DALEX."
 ---
 
-```{r setup, include=FALSE, message=FALSE, results='hide'}
+```{r setup, include=FALSE, message=FALSE}
 library(learnr)
 library(gradethis)
 library(DALEX)
@@ -100,7 +100,7 @@ In the next steps we will create and explain a model that predicts whether a per
 ### Create a random forest model
 Insert the name of the target variable in the code chunk and run the code to train a random forest model. You can click on the **Solution** button to get help.
 
-```{r rf-titanic, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+```{r rf-titanic, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
 library(ranger)
 set.seed(1313)
 titanic_rf <- ranger(___ ~ ., data = titanic_imputed,
