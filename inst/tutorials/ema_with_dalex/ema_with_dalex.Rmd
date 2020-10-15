@@ -16,9 +16,7 @@ library(ranger)
 library(rms)
 
 knitr::opts_chunk$set(echo = FALSE, exercise.checker = gradethis::grade_learnr)
-```
 
-```{r objects, include=FALSE, message=FALSE, results='hide', cache = TRUE}
 set.seed(1313)
 titanic_rf <- ranger(survived ~ ., data = titanic_imputed,
                           classification = TRUE, probability = TRUE)
