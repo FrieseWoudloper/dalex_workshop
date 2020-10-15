@@ -1,7 +1,7 @@
 Package: dalextutorial
 Type: Package
 Title: Explanatory model analysis with DALEX
-Version: 0.1.1
+Version: 0.1.2
 Author: somayeh koohborfardhaghighi, Willy Tadema
 Maintainer: Willy Tadema <friesewoudloper@gmail.com>
 Description: Tutorial on explaining machine learning models with R and DALEX.
