@@ -1,6 +1,13 @@
 language: r
 cache: packages
 
+r_packages:
+  - ranger
+  - rms
+
+r_github_packages:
+  - rstudio-education/gradethis
+
 after_success:
   # Download thesis
   - wget https://www.rug.nl/research/portal/files/132028374/Complete_thesis.pdf
