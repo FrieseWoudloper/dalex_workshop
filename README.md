@@ -30,3 +30,19 @@ To install the `gradethis` package, use:
 remotes::install_github("rstudio-education/gradethis")
 ```
 
+Then, in the bottom-right panel, click on the 'Files', then go to the
+'inst | tutorials | ema_with_dalex' and click on `ema_with_dalex.Rmd`.
+Click om 'Run document'.
+
+If you get the error below, install the needed package and click 'Run document' again.
+
+![](install_after_run_document.png)
+
+Now, you are ready to go:
+
+![](start.png)
+
+
+
+install_after_run_document.png
+
