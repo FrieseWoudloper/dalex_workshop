@@ -100,7 +100,7 @@ In the next steps we will create and explain a model that predicts whether a per
 ### Create a random forest model
 Insert the name of the target variable in the code chunk and run the code to train a random forest model. You can click on the **Solution** button to get help.
 
-```{r rf-titanic, exercise=TRUE, exercise.eval=FALSE}
+```{r rf-titanic, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
 library(ranger)
 set.seed(1313)
 titanic_rf <- ranger(___ ~ ., data = titanic_imputed,
@@ -121,7 +121,7 @@ Create a model explainer using the `explain` function from the `DALEX` package.
 
 The first argument to the function is the model you want to explain. It is the model you created in the previous step. The second argument is the data frame with the features, and the third a numeric vector with the true outcome of the target variable. The last one is the name of the model. It can be anything you like.
 
-```{r explain-rf-titanic, exercise=TRUE, exercise.eval=FALSE}
+```{r explain-rf-titanic, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
 library(DALEX)
 exp_rf <- explain(___,
                   data = titanic_imputed[, 1:7],
@@ -159,7 +159,7 @@ head(exp_rf$y_hat)
 
 Let's also train a logistic regression model with splines, so we can choose the best model. Again create an explainer, so we can later on compare the two models not only on accuracy, but also explainability.
 
-```{r rms-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=9}
+```{r rms-titanic, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
 library(rms)
 titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
                    data = titanic_imputed)
@@ -182,7 +182,7 @@ exp_lms <- explain(titanic_lms,
 
 Extract the model base information from the explainer.
 
-```{r rms-model-info-titanic, exercise=TRUE, exercise.eval=FALSE, exercise.lines=3}
+```{r rms-model-info-titanic, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
 exp_lms$___
 ```
 
@@ -324,7 +324,7 @@ plot(sh_joe_rf, show_boxplots = FALSE)
 
 Now also visualize Joe's SHAP values based upon the logistic regression model, so we can compare not only the predictions, but also the explanations of the two different models.
 
-```{r sh-joe-lms-titanic, exercise=TRUE, exercise.eval=FALSE}
+```{r sh-joe-lms-titanic, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
 sh_joe_lms <- predict_parts(___, joe, type = "shap")
 plot(___, show_boxplots = FALSE)
 ```
