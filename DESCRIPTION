@@ -8,12 +8,8 @@ Description: Tutorial on explaining machine learning models with R and DALEX.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-Suggests: 
-    learnr
 Imports: 
-    gradethis (>= 0.1.0.9004),
+    learnr,
     DALEX,
-    randomForest,
+    ranger,
     rms
-Remotes: 
-    rstudio-education/gradethis
