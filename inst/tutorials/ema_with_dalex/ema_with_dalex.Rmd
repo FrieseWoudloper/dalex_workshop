@@ -4,7 +4,6 @@ output:
   learnr::tutorial:
     progressive: true
     allow_skip: true
-    number_sections: true
 runtime: shiny_prerendered
 description: "Learn to explore, explain and examine predictive models with DALEX."
 ---
@@ -15,15 +14,10 @@ library(DALEX)
 library(ranger)
 library(rms)
 
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FALSE)
  
-# Train en test
-set.seed(1234)
-index <- sample(1:nrow(titanic_imputed), 
-                as.integer(nrow(titanic_imputed) * .80), 
-                replace = FALSE)
-train <- titanic_imputed[index,]
-test <- titanic_imputed[-index,]
+# Data
+train <- titanic_imputed
 
 # Train models
 titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
@@ -43,27 +37,19 @@ exp_rf <- explain(titanic_rf,
                   label = "Random Forest")
 
 # Create model performance object
-mp_rf <- model_performance(exp_rf)
 mp_lms <- model_performance(exp_lms)
+mp_rf <- model_performance(exp_rf)
 
-# joe <- titanic_imputed[1,]
-# johnny_d <- data.frame(
-#           class = factor("1st", levels = c("1st", "2nd", "3rd", 
-#                      "deck crew", "engineering crew", 
-#                      "restaurant staff", "victualling crew")),
-#           gender = factor("male", levels = c("female", "male")),
-#           age = 8, sibsp = 0, parch = 0, fare = 72,
-#           embarked = factor("Southampton", levels = c("Belfast",
-#                       "Cherbourg","Queenstown","Southampton")))
-# 
-# lucy <- data.frame(
-#       class = factor("1st", levels = c("1st", "2nd", "3rd", 
-#                      "deck crew", "engineering crew", 
-#                      "restaurant staff", "victualling crew")),
-#       gender = factor("female", levels = c("female", "male")),
-#       age = 18, sibsp = 0, parch = 0, fare = 70,
-#       embarked = factor("Southampton", levels = c("Belfast",
-#                         "Cherbourg","Queenstown","Southampton")))
+# Instances
+joe <- titanic_imputed[1,]
+lucy <- data.frame(
+      class = factor("1st", levels = c("1st", "2nd", "3rd",
+                     "deck crew", "engineering crew",
+                     "restaurant staff", "victualling crew")),
+      gender = factor("female", levels = c("female", "male")),
+      age = 18, sibsp = 0, parch = 0, fare = 70,
+      embarked = factor("Southampton", levels = c("Belfast",
+                        "Cherbourg","Queenstown","Southampton")))
 # 
 # bd_joe <- predict_parts(exp_rf, joe, type = "break_down_interactions")
 # bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down_interactions")
@@ -71,11 +57,11 @@ mp_lms <- model_performance(exp_lms)
 # sh_joe_lms <- predict_parts(exp_lms, joe, type = "shap")
 ```
 
-## Welcome
+## 1 Welcome
 
 This tutorial will teach you how to explore, explain and examine predictive models using the [DALEX](https://modeloriented.github.io/DALEX/) package in R. DALEX is short for mo<b>D</b>el <b>A</b>gnostic <b>L</b>anguage for <b>E</b>xploration and e<b>X</b>planation.
 
-### Learning objectives
+### 1.1 Learning objectives
 
 We will cover:    
 
@@ -91,47 +77,43 @@ The tutorial focuses solely on explainability of classification models. However,
 
 This tutorial is based on the book [Explanatory Model Analysis](https://pbiecek.github.io/ema/) by Przemyslaw Biecek and Tomasz Burzykowski. It is a great resource and highly recommended. 
 
-### Pre-requisites 
+### 1.2 Pre-requisites 
 We assume you have basic knowledge of training and evaluating machine learning models in R.
 
 Let's get started!
 
-## Titanic dataset
-For the exercises we will use the `titanic_imputed` dataset. It is a list of people who were on board the Titanic when it sank. Run `?DALEX::titanic_imputed` in R for detail information about the dataset.
+## 2 Titanic dataset
+We will use the `titanic_imputed` dataset. It is a list of people who were on board the Titanic when it sank. Run `?DALEX::titanic_imputed` in R for detail information about the dataset.
 
-In the next steps we will create different kind of models that predict whether a person will survive. That is why we split the dataset into a training and test set.
+In the next steps of this tutorial we will train two different kind of model. They both predict whether a person will survive.
 
-Click on **Run Code** to create the training and test set, and see the first six rows of the training set.   
+Click on **Run Code** to see the first six rows of the dataset.   
 
-```{r ex1, exercise=TRUE, exercise.eval=FALSE}
-index <- sample(1:nrow(titanic_imputed), 
-                as.integer(nrow(titanic_imputed) * .80), 
-                replace = FALSE)
-train <- titanic_imputed[index,]
-test <- titanic_imputed[-index,]
+```{r ex1, exercise = TRUE}
+train <- titanic_imputed
 head(train)
 ```
 
-`survived` is the target variable. It specifies whether the person has survived the sinking: Yes (1) or No (0).
+`survived` is the target variable. It specifies whether the person has survived the sinking: _Yes_ (1) or _No_ (0).
 
-## Model
+## 3 Model
 
-### Logistic regression model
+### 3.1 Logistic regression model
 
 First we train a logistic regression model with splines. Click on **Run Code**.
 
-```{r ex2, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
+```{r ex2, exercise = TRUE}
 library(rms)
 titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class, 
                    data = train)
 titanic_lms
 ```
 
-### Random forest model
+### 3.2 Random forest model
 
 We also train a random forest model, so we can later on choose the best model. Insert the name of the target variable in the code chunk and run the code. You can click on the **Solution** button to get help.
 
-```{r ex3, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
+```{r ex3, exercise = TRUE}
 library(ranger)
 set.seed(1234)
 titanic_rf <- ranger(___ ~ ., 
@@ -151,15 +133,15 @@ titanic_rf <- ranger(survived ~ .,
 titanic_rf
 ```
 
-## Explainer
-
-### Explainer for the logistic regression model
+## 4 Explainer
 
 In the previous step we created two models. They have different internal structures and interfaces. We need a uniform interface in order to create explanations and compare both models. For this purpose we create model explainer objects.
 
-We do that with the help of the `explain()` function from the `DALEX` package. The first and required argument to the function is the model to be explained. The `data` argument specifies a data frame with features and `y` a numeric vector with true outcomes. `label` contains the name of the model. It can be anything you like.
+### 4.1 Explainer for the logistic regression model
 
-```{r ex4, exercise=TRUE, warning=FALSE, message=FALSE, error=FALSE}
+We create an explainer object with the `explain()` function from the `DALEX` package. The first and required argument to the function is the model to be explained. The `data` argument specifies a data frame with features and `y` a numeric vector with true outcomes. `label` contains the name of the model. It can be anything you like.
+
+```{r ex4, exercise = TRUE}
 library(DALEX)
 exp_lms <- explain(___,
                    data = train[, 1:7],
@@ -177,15 +159,15 @@ exp_lms <- explain(titanic_lms,
 
 After the explainer has been created, you can retrieve basic information about the model.
 
-```{r ex5, exercise=TRUE, exercise.eval=FALSE}
+```{r ex5, exercise = TRUE}
 exp_lms$model_info
 ```
 
-### Explainer for the random forest model
+### 4.2 Explainer for the random forest model
 
 Now also create an explainer for the random forest model.
 
-```{r ex6, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+```{r ex6, exercise = TRUE}
 
 exp_rf <- explain(___,
                   data = ___,
@@ -194,7 +176,6 @@ exp_rf <- explain(___,
 ```
 
 ```{r ex6-solution}
-library(DALEX)
 exp_rf <- explain(titanic_rf,
                   data = train[, 1:7],
                   y = train$survived,
@@ -203,7 +184,7 @@ exp_rf <- explain(titanic_rf,
 
 Extract model information from the explainer.
 
-```{r ex7, exercise=TRUE, exercise.eval=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+```{r ex7, exercise = TRUE}
 
 ```
 
@@ -211,7 +192,7 @@ Extract model information from the explainer.
 exp_rf$model_info
 ```
 
-```{r q1, echo=FALSE}
+```{r q1}
 l <- unlist(strsplit(exp_rf$model_info$ver, "[.]"))
 create_answer <- function(){
   index <- sample(1:3, 1)
@@ -226,128 +207,159 @@ question("What version of the <code>ranger</code> package was used to create the
 )
 ```
 
-<!-- ## Model performance -->
+## 5 Model performance
 
-<!-- Let's see how both models perform on the training set using the `model_performance()` function. Of course you should also evaluate performance on a testing dataset. However, to keep this tutorial simple, we'll skip that part for now. -->
+Let us examine model performance. We can do this by calculating performance metrics with the `model_performance()` function and then visualizing them.
 
-<!-- ```{r mp-rf-titanic, exercise=TRUE, exercise.eval=TRUE, exercise.lines=3} -->
-<!-- model_performance(exp_rf) -->
-<!-- ``` -->
+Of course, it is not sufficient to calculate performance metrics on the training set. You want to evaluate model performance on unseen data, also known as the test set. However, to keep this tutorial simple, we will skip that part for now.
 
-<!-- <div id="mp-rf-titanic-hint"> -->
-<!-- **Hint:** You may want to compare the output of `model_performance(exp_rf)` to `model_performance(exp_lms)`. -->
-<!-- </div> -->
+### 5.1 Performance metrics
 
-<!-- ```{r mp-titanic, echo=FALSE} -->
-<!-- question("Which model we trained in the previous section seems to perform better?", -->
-<!--   answer("Random forest model", correct = TRUE), -->
-<!--   answer("Logistic regression model with splines"), -->
-<!--   answer("Both models perform equally") -->
-<!-- ) -->
-<!-- ``` -->
+Extend the code below to calculate performance metrics for the logistic regression model as well as those for the random forest model.
 
-<!-- We can visualize and compare model performance using the `plot` function. By providing an `geom` argument we can specify how we want to summarize residuals. Valid values are `"prc"`, `"roc"`, `"ecdf"`, `"boxplot"`, `"gain"`, `"lift"` and `"histogram"`. -->
+```{r ex8, exercise = TRUE}
+mp_lms <- model_performance(exp_lms)
+unlist(mp_lms$measures)
+```
 
-<!-- Adjust the code below so that an _Receiver Operator Characteristic_ (ROC) curve is created, and we can verify that the random forest model has a larger _Area Under the Curve_ (AUC) and thus performs better. -->
+```{r ex8-solution}
+mp_lms <- model_performance(exp_lms)
+unlist(mp_lms$measures)
+mp_rf <- model_performance(exp_rf)
+unlist(mp_rf$measures)
+```
 
-<!-- ```{r roc-titanic, exercise=TRUE, exercise.eval=TRUE} -->
-<!-- mp_rf <- model_performance(exp_rf) -->
-<!-- mp_lms <- model_performance(exp_lms) -->
-<!-- plot(mp_rf, mp_lms, geom = "prc") -->
-<!-- ``` -->
-
-<!-- ```{r roc-titanic-solution} -->
-<!-- mp_rf <- model_performance(exp_rf) -->
-<!-- mp_lms <- model_performance(exp_lms) -->
-<!-- plot(mp_rf, mp_lms, geom = "roc") -->
-<!-- ``` -->
-
-<!-- ## Explanations for overall model behavior -->
-
-<!-- ## Explanations for predictions -->
-
-<!-- ### Make predictions -->
-
-<!-- Let us now compare predictions that are obtained from the two different models. In particular, we compute the predicted probability of survival for Joe. -->
-
-<!-- Joe is a 42-year-old male who embarked in Southampton and travels third class with no parents nor siblings, and with a ticket costing a little over 7 pounds. -->
-
-<!-- ```{r henry-titanic, exercise=TRUE, exercise.eval=FALSE} -->
-<!-- joe <- titanic_imputed[1,] -->
-<!-- joe -->
-<!-- ``` -->
-
-<!-- First predict the probability of Joe surviving using the random forest model. -->
-
-<!-- ```{r pred-joe-titanic, exercise=TRUE, exercise.eval=TRUE} -->
-<!-- predict(exp_rf, joe) -->
-<!-- ``` -->
-
-<div id="pred-joe-titanic-hint">
-**Hint:** You probably want to compare the output of `predict(exp_rf, joe)` to `predict(exp_lms, joe)`.
-</div>
-
-We can also predict survival using the logistic regression model.
-
-```{r joe-titanic, echo=FALSE}
-question("Which model predicts a slightly higher probability of survival for Joe?",
-  answer("Random forest model", correct = TRUE),
-  answer("Logistic regression model with splines")
+```{r q2}
+question("Which model performs best on the training data?",
+  answer("Logistic regression model with splines"),
+  answer("Random forest model", correct = TRUE),  
+  answer("Both models perform equally")
 )
 ```
 
-<!-- ### Create break-down plots  -->
+### 5.2 Visualization
 
-<!-- Both our models predict that it is not very likely that Joe will survive the sinking of the Titanic. Which characteristics of Joe were of most importance here? One way of answering this question is by creating a _break-down plot for additive attributions_. The plot is a decomposition of the model's prediction into contributions that can be attributed to different explanatory variables. -->
+We can now visualize and compare model performance using the `plot` function. By providing an `geom` argument we can specify what kind of plot we want. We can choose between `"prc"`, `"roc"`, `"ecdf"`, `"boxplot"`, `"gain"`, `"lift"` and `"histogram"`.
 
-<!-- ```{r bd-joe-titanic, exercise=TRUE, exercise.eval=TRUE} -->
-<!-- bd_joe <- predict_parts(exp_rf, joe, type = "break_down_interactions") -->
-<!-- plot(bd_joe) -->
-<!-- ``` -->
+Adjust the code below so that an _Receiver Operator Characteristic_ (ROC) curve is created, and we can visually examine the _Area Under the Curve_ (AUC).
 
-<!-- From the break-down profile we can see, that the fact that Joe is a man decreases his chances of survival significantly. -->
+```{r ex9, exercise = TRUE, exercise.eval = TRUE}
+plot(mp_rf, mp_lms, geom = "prc")
+```
 
-<!-- Another passenger aboard the Titanic is Lucy. She is a 18-year-old girl who also embarked in Southampton and travels first class without parents nor siblings. Her ticket costs 70 pounds. A dataframe containing Lucy's characteristics has already been created for our convenience. -->
+```{r ex9-solution}
+plot(mp_rf, mp_lms, geom = "roc")
+```
 
-<!-- ```{r pred-lucy-titanic, exercise=TRUE, exercise.eval=TRUE} -->
-<!-- predict(exp_rf, lucy) -->
-<!-- ``` -->
+## 6 Dataset level explanations
 
-<!-- ```{r pred-lucy-titanic-solution} -->
-<!-- bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down_interactions") -->
-<!-- plot(bd_lucy) -->
-<!-- ``` -->
+## 7 Instance level explanations
 
-<!-- Our random forest model predicts that Lucy will very likely survive. Now let's answer the following question using this model and a break-down plot. Add some code to the chunk above to get the right answer. -->
+An instance level explanation answers the question why a particular prediction was made for an observation. It is an explanation for a single prediction.
 
-<!-- ```{r lucy-titanic, echo=FALSE} -->
-<!-- question("Which three characteristics of Lucy have the biggest <u>positive</u> contribution to her predicted survival?", -->
-<!--   answer("age = 18"), -->
-<!--   answer("class = 1st", correct = TRUE),   -->
-<!--   answer("embarked = Southampton"), -->
-<!--   answer("fare = 70", correct = TRUE), -->
-<!--   answer("gender = female", correct = TRUE), -->
-<!--   answer("number of siblings aboard = 0"), -->
-<!--   answer("number of parents aboard = 0") -->
-<!-- ) -->
-<!-- ``` -->
+### 7.1 Predictions
 
-<!-- ### Important issue with break-down plots -->
+Let's say we want to predict whether Joe will survive the sinking of the Titanic. Joe is a 42-year-old male who embarked in Southampton and travels third class with no parents nor siblings, and with a ticket costing a little over 7 pounds. A dataframe containing Joe's characteristics has already been created for our convenience.
 
-<!-- Break-down plots are easy to understand, and they are compact. However, they can also be misleading. This is the case for models including interactions. Break-down plots only show the additive attributions. Thus the choice of the ordering of the explanatory variables in the calculation of the variable-importance measures is important. Let's illustrate this with an example. -->
+```{r ex10, exercise = TRUE, exercise.eval = TRUE}
+joe
+```
 
-<!-- ```{r bd-order-titanic, exercise=TRUE, exercise.eval=TRUE} -->
-<!-- bd_lucy_order <- predict_parts(exp_rf, lucy,  -->
-<!--                                order = c("age", "gender", "fare", "class", -->
-<!--                                          "parch", "sibsp", "embarked")) -->
-<!-- plot(bd_lucy_order) -->
-<!-- ``` -->
+The code below returns the logistic regression model's prediction for Joe. Add a line of code so it also gives the prediction according to the random forest model.
 
-<!-- We can see that fare&nbsp;=&nbsp;70 now has a <u>negative</u> contribution to the prediction, and that the positive contribution of class&nbsp;=&nbsp;1st has significantly increased! -->
+```{r ex11, exercise = TRUE, exercise.eval = TRUE}
+predict(exp_lms, joe)
+```
 
-<!-- There are several ways of addressing the issue of the dependence of the variable-importance measure on the ordering of the explanatory variables. One approach is using SHAP, as we will see in the next section. -->
+```{r ex11-solution}
+cat("Logistic regression with splines:", predict(exp_lms, joe))
+cat("Random forest:", predict(exp_rf, joe))
+```
 
-<!-- ### Create SHapley Additive exPlanations -->
+```{r q3}
+question("Which model predicts a slightly higher survival probability for Joe?",
+  answer("Logistic regression model with splines"),
+  answer("Random forest model", correct = TRUE),
+  answer("Both models predict an equal survival probability")
+)
+```
+
+### Break-down plot for additive attributions
+
+Both our models predict that it is not very likely that Joe will survive the sinking of the Titanic. Which features of Joe were of most importance? One way of answering this question is by creating a _break-down plot for additive attributions_. The plot is a decomposition of a model's prediction into contributions that can be attributed to different explanatory variables.
+
+Create a break-down plot for Joe's prediction obtained from the random forest model.
+
+```{r ex12, exercise = TRUE, exercise.eval = TRUE}
+bd_joe <- predict_parts(exp_rf, joe, type = "break_down")
+plot(bd_joe)
+```
+
+The first row in the break-down plot shows the overall mean value of predictions for the entire dataset. It is an estimate of the expected value of the model’s predictions over the distribution of all explanatory variables.
+
+The next rows present the changes in the mean prediction when fixing values of subsequent explanatory variables. They are the contributions attributed to the explanatory variables, and can be positive or negative.
+
+The last row contains the prediction for the particular instance of interest. It is the sum of the overall mean value and the changes.
+
+```{r q4}
+question("What is the estimate of the expected value of the model's predictions over the distribution of all explanatory variables?",
+  answer(paste(round(bd_joe$contribution[1] * 100, 1), "%"), TRUE),
+  answer(paste(round(bd_joe$contribution[2] * 100, 1), "%")),
+  answer(paste(round(bd_joe$contribution[6] * 100, 1), "%")),
+  answer(paste(round(bd_joe$contribution[9] * 100, 1), "%"))
+)
+```
+
+Another passenger aboard the Titanic is Lucy. She is a 18-year-old girl who also embarked in Southampton and travels first class without parents nor siblings. Her ticket costs 70 pounds. 
+
+Adjust the code and create a break-down plot for Lucy's prediction from the random forest model.
+
+```{r ex13, exercise = TRUE}
+bd_lucy <- predict_parts(___, lucy, type = ___)
+plot(bd_lucy)
+```
+
+```{r ex13-solution}
+bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down")
+plot(bd_lucy)
+```
+
+As we can see, the random forest model predicts that Lucy will very likely survive (`r paste(round(predict(exp_rf, lucy) * 100, 1))` %). 
+
+```{r q5}
+question("Which three characteristics of Lucy have the biggest <u>positive</u> contribution to her predicted survival?",
+  answer("age = 18"),
+  answer("class = 1st", correct = TRUE),
+  answer("embarked = Southampton"),
+  answer("fare = 70", correct = TRUE),
+  answer("gender = female", correct = TRUE),
+  answer("number of siblings aboard = 0"),
+  answer("number of parents aboard = 0")
+)
+```
+
+### Break-down plot with interactions
+
+Break-down plots are easy to understand. However, they can also be misleading. Break-down plots only show the <u>additive</u> attributions. Hence, the order of the explanatory in the calculation of the break-down plot matters for models including interactions. Let's illustrate this with an example.
+
+```{r ex14, exercise = TRUE, exercise.eval = TRUE}
+bd_lucy_order <- predict_parts(exp_rf, lucy, type = "break_down",
+                               order = c("age", "gender", "fare", "class",
+                                         "parch", "sibsp", "embarked"))
+plot(bd_lucy_order)
+```
+
+After changing the order of the explanatory variables, `fare = 70` has a <u>negative</u> contribution to the prediction. Also the positive contribution of `class = 1st` has significantly increased.
+
+There are several ways of addressing this issue. One of them is identifying interactions and taking them into account when creating a break-down plot. We can do this by specifying `type = "break_down_interactions` in the `predict_parts()` function.
+
+```{r ex15, exercise = TRUE}
+plot(predict_parts(exp_rf, lucy, type = "break_down_interactions"))
+```
+
+Another approach is using SHAP, as we will see in the next section.
+
+### SHAP
 
 <!-- Another way to explain individual predictions is by creating _SHapley Additive exPlanations_ (SHAP).  -->
 
