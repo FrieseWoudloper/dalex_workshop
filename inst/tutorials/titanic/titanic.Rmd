@@ -1,0 +1,265 @@
+---
+title: "DALEX"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+runtime: shiny_prerendered
+description: "Learn to explore, explain and examine classification models with DALEX using the Titanic dataset."
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(learnr)
+library(DALEX)
+library(rms)
+library(randomForest)
+library(gbm)
+library(e1071)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FALSE)
+
+# Data
+titanic <- titanic_imputed
+titanic$survived[titanic$survived == 0] <- "no"
+titanic$survived[titanic$survived == 1] <- "yes"
+titanic$survived <- as.factor(titanic$survived)
+
+johnny_d <- data.frame(
+          class = factor("1st", 
+                         levels = c("1st", "2nd", "3rd", "deck crew", 
+                                    "engineering crew", "restaurant staff", 
+                                    "victualling crew")),
+          gender = factor("male", 
+                          levels = c("female", "male")),
+          age = 8, 
+          sibsp = 0, 
+          parch = 0, 
+          fare = 72,
+          embarked = factor("Southampton", 
+                            levels = c("Belfast","Cherbourg",
+                                       "Queenstown","Southampton")))
+
+henry <- data.frame(
+       class = factor("1st", 
+                      levels = c("1st", "2nd", "3rd", 
+                                 "deck crew", "engineering crew", 
+                                 "restaurant staff", "victualling crew")),
+       gender = factor("male", 
+                       levels = c("female", "male")),
+       age = 47, 
+       sibsp = 0, 
+       parch = 0, 
+       fare = 25,
+       embarked = factor("Cherbourg", 
+                         levels = c("Belfast", "Cherbourg","Queenstown","Southampton")))
+ 
+# Train models
+set.seed(1313)
+titanic_lrm <- lrm(survived == "yes" ~ class + gender + rcs(age) + sibsp + 
+                     parch + fare + embarked, data = titanic)
+titanic_rf <- randomForest(survived ~ class + gender + age + sibsp + parch + 
+                             fare + embarked, data = titanic)
+titanic_gbm <- gbm(survived == "yes" ~ class + gender + age + sibsp + parch + fare + embarked, 
+                   data = titanic, 
+                   n.trees = 15000, 
+                   distribution = "bernoulli")
+titanic_svm <- svm(survived == "yes" ~ class + gender + age + 
+                 sibsp + parch + fare + embarked, data = titanic, 
+                 type = "C-classification", probability = TRUE)
+
+# Create explainer objects
+train <- titanic_imputed
+exp_lms <- explain(titanic_lrm,
+                   data = train,
+                   y = train$survived,
+                   label = "Logistic with splines")
+exp_rf <- explain(titanic_rf,
+                  data = train[, 1:7],
+                  y = train$survived,
+                  label = "Random Forest")
+
+# Create model performance object
+mp_lms <- model_performance(exp_lms)
+mp_rf <- model_performance(exp_rf)
+
+# Instances
+joe <- titanic_imputed[1,]
+lucy <- data.frame(
+      class = factor("1st", levels = c("1st", "2nd", "3rd",
+                     "deck crew", "engineering crew",
+                     "restaurant staff", "victualling crew")),
+      gender = factor("female", levels = c("female", "male")),
+      age = 18, sibsp = 0, parch = 0, fare = 70,
+      embarked = factor("Southampton", levels = c("Belfast",
+                        "Cherbourg","Queenstown","Southampton")))
+# 
+# bd_joe <- predict_parts(exp_rf, joe, type = "break_down_interactions")
+# bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down_interactions")
+# sh_joe_rf <- predict_parts(exp_rf, joe, type = "shap")
+# sh_joe_lms <- predict_parts(exp_lms, joe, type = "shap")
+```
+
+## 1 Welcome
+
+This tutorial will teach you how to explore, explain and examine predictive models using the [DALEX](https://modeloriented.github.io/DALEX/) package in R. DALEX is short for mo<b>D</b>el <b>A</b>gnostic <b>L</b>anguage for <b>E</b>xploration and e<b>X</b>planation.
+
+### 1.1 Learning objectives
+
+We will cover:    
+
++ How to obtain insight into the overall behavior of a model.
++ How to obtain insight into a model's prediction for a single observation.
++ How to examine model performance and understanding the weaknesses.
+
+We will only use _model-agnostic_ methods. These methods treat machine learning models as black boxes. They do not need access to model internals. They work by changing the input of the model and measuring changes in the prediction output.
+
+This tutorial focuses solely on explainability of classification models. However, DALEX can just as easily be used to explain regression models.
+
+This tutorial is based on the book [Explanatory Model Analysis](https://pbiecek.github.io/ema/) by Przemyslaw Biecek and Tomasz Burzykowski. It is a great resource and highly recommended. You can read it for free online. The book will also be available in print from early 2021.
+
+### 1.2 Pre-requisites 
+We assume you have basic knowledge of R, specifically of training machine learning models.
+
+Let's get started!
+
+## 2 Titanic dataset
+We will use the `titanic` dataset. It contains the details of a subset of persons aboard the Titanic when it sank: 
+
+* *gender*, the person's gender;
+* *age*, the person's age in years; 
+* *class*, the class in which the passenger travelled, or the duty class of a crew member;
+* *embarked*, the harbor in which the person embarked on the ship;
+* *fare*, the price of the ticket;
+* *sibsp*, the number of siblings/spouses aboard the ship;
+* *parch*, the number of parents/children aboard the ship;
+* *survived*, the person's survival of the disaster, _yes_ or _no_.
+
+Click **Run Code** to see the first six rows of the dataset.   
+
+```{r ex1, exercise = TRUE}
+head(titanic)
+```
+
+In the next steps of this tutorial we will create two different kind of models. They both predict the probability of survival aboard the Titanic. So `survived` is the dependent variable. 
+
+## 3 Models
+
+### 3.1 Logistic regression model
+
+It makes sense to start with a logistic regression model. We use restricted cubic splines to model the non-linear effect of age on the odds of survival.     
+
+Click **Run Code** to train the model.
+
+```{r ex2, exercise = TRUE}
+library(rms)
+titanic_lrm <- lrm(survived == "yes" ~ class + gender + rcs(age) + sibsp + parch + fare + embarked, 
+                   data = titanic)
+cat("The logistic regression model was created.")
+```
+
+### 3.2 Random forest model
+
+Next we train a random forest model. Insert the name of the dependent variable in the code chunk. Run the code. Click the **Solution** button to get help.
+
+```{r ex3, exercise = TRUE}
+library(randomForest)
+set.seed(1313)
+titanic_rf <- randomForest(___ ~ class + gender + age + sibsp + parch + fare + embarked, 
+                           data = titanic)
+cat("The random forest model was created.")
+```
+
+```{r ex3-solution}
+library(randomForest)
+set.seed(1313)
+titanic_rf <- randomForest(survived ~ class + gender + age + sibsp + parch + fare + embarked, 
+                           data = titanic)
+cat("The random forest model was created.")
+```
+
+### 3.3 Gradient boosting model
+
+```{r ex4, exercise = TRUE, exercise.timelimit = 90}
+library(gbm)
+set.seed(1313)
+titanic_gbm <- gbm(survived == "yes" ~ class + gender + age + sibsp + parch + fare + embarked, 
+                   data = titanic, 
+                   n.trees = 15000, 
+                   distribution = "bernoulli")
+cat("The gradient boosting model was created.")
+```
+
+### 3.4 Support vector machine model
+
+```{r ex5, exercise = TRUE}
+library(e1071)
+set.seed(1313)
+titanic_svm <- svm(survived == "yes" ~ class + gender + age + 
+                 sibsp + parch + fare + embarked, data = titanic, 
+                 type = "C-classification", probability = TRUE)
+cat("The support vector machine model was created.")
+```
+
+
+## 4 Models' predictions
+
+Let's predict the probability of survival for two passengers aboard the Titanic: Johnny D and Henry. 
+
+### 4.1 Johnny D
+
+For convenience, a dataset with Johnny D's data has already been created.
+
+```{r ex6, exercise = TRUE, exercise.eval = TRUE}
+print(johnny_d)
+```
+
+As we can see, Johnny D is an 8-year-old boy who embarked in Southampton and travelled in the first class with no parents nor siblings, and with a ticket costing 72 pounds.
+
+We obtain the predicted probability of survival for Johnny D for the different models with the generic function `predict()`.
+
+```{r ex7, exercise = TRUE}
+pred_lrm <- predict(titanic_lrm, johnny_d, type = "fitted")
+pred_rf  <- predict(titanic_rf,  johnny_d, type = "prob")
+pred_gbm <- predict(titanic_gbm, johnny_d, type = "response", n.trees = 15000)
+pred_svm <- predict(titanic_svm, johnny_d, probability = TRUE)
+cat("Predicted probability of survival for Johnny D\n",
+    "==============================================\n",
+    sprintf("Logistic regression model: %.*f\n", 2, pred_lrm),
+    sprintf("Random forest model: %.*f\n", 2, pred_rf[1, "yes"]),    
+    sprintf("Gradient boosting model: %.*f\n", 2, pred_gbm), 
+    sprintf("Support vector machine model: %.*f\n", 2, attr(pred_svm, "probabilities")[1,"TRUE"]), 
+    sep = "")
+```
+
+### 4.2 Henry
+
+Henry is an 47-year-old man who embarked in Cherbourg and travelled in the first class with no parents nor siblings, and with a ticket costing 25 pounds.
+
+```{r ex8, exercise = TRUE, exercise.eval = TRUE}
+print(henry)
+```
+
+For Henry we can also predict the odds of survival using different models.
+
+```{r ex9, exercise = TRUE}
+pred_lrm <- predict(titanic_lrm, henry, type = "fitted")
+pred_rf  <- predict(titanic_rf,  henry, type = "prob")
+pred_gbm <- predict(titanic_gbm, henry, type = "response", n.trees = 15000)
+pred_svm <- predict(titanic_svm, henry, probability = TRUE)
+cat("Predicted probability of survival for Henry\n",
+    "==============================================\n",
+    sprintf("Logistic regression model: %.*f\n", 2, pred_lrm),
+    sprintf("Random forest model: %.*f\n", 2, pred_rf[1, "yes"]),    
+    sprintf("Gradient boosting model: %.*f\n", 2, pred_gbm), 
+    sprintf("Support vector machine model: %.*f\n", 2, attr(pred_svm, "probabilities")[1,"TRUE"]), 
+    sep = "")
+```
+
+```{r q5}
+question("How does the overall prediction for Henry compare to that for Johnny D?",
+  answer("Henry's predicted probability of survival is lower.", correct = TRUE),
+  answer("The predicted probabilities of survival for Henry and Johnny D are equal."),
+  answer("Henry's predicted probability of survival is higher.")
+)
+```
+

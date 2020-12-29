@@ -20,14 +20,13 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FA
 train <- titanic_imputed
 
 # Train models
-titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class,
-                   data = train)
+lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class, data = train)
 set.seed(1234)
 titanic_rf <- ranger(survived ~ ., data = train,
                      classification = TRUE, probability = TRUE)
 
 # Create explainer objects
-exp_lms <- explain(titanic_lms,
+exp_lms <- explain(lms,
                    data = train,
                    y = train$survived,
                    label = "Logistic with splines")
@@ -65,15 +64,15 @@ This tutorial will teach you how to explore, explain and examine predictive mode
 
 We will cover:    
 
-+ How to create an _explainer_ for a model
-+ How to examine model accuracy 
-+ How to create an explanation for the overall behavior of a model (_dataset level_)
-+ How to create an explanation for individual predictions (_instance level_)
-+ How to compare models with regard to explainability
++ How to create an _explainer_ for a model.
++ How to examine model accuracy.
++ How to create an explanation for the overall behavior of a model (_global_ explanation).
++ How to create an explanation for individual predictions (_local_ explanation).
++ How to compare models with regard to explainability.
 
 We will only use _model-agnostic_ methods. These methods treat machine learning models as black boxes. They do not need access to model internals. They work by changing the input of the model and measuring changes in the prediction output.
 
-The tutorial focuses solely on explainability of classification models. However, DALEX can just as easily be used to explain regression models.
+This tutorial focuses solely on explainability of classification models. However, DALEX can just as easily be used to explain regression models.
 
 This tutorial is based on the book [Explanatory Model Analysis](https://pbiecek.github.io/ema/) by Przemyslaw Biecek and Tomasz Burzykowski. It is a great resource and highly recommended. 
 
@@ -83,9 +82,9 @@ We assume you have basic knowledge of training and evaluating machine learning m
 Let's get started!
 
 ## 2 Titanic dataset
-We will use the `titanic_imputed` dataset. It is a list of people who were on board the Titanic when it sank. Run `?DALEX::titanic_imputed` in R for detail information about the dataset.
+We will use the `titanic_imputed` dataset. It is a list of people who were on board the Titanic when it sank. You can run `?DALEX::titanic_imputed` in R for more detail information about the dataset.
 
-In the next steps of this tutorial we will train two different kind of model. They both predict whether a person will survive.
+In the next steps of this tutorial we will train two different kind of models. They both predict whether a person will survive.
 
 Click on **Run Code** to see the first six rows of the dataset.   
 
@@ -100,13 +99,12 @@ head(train)
 
 ### 3.1 Logistic regression model
 
-First we train a logistic regression model with splines. Click on **Run Code**.
+First we train a logistic regression model. Click on **Run Code**.
 
 ```{r ex2, exercise = TRUE}
 library(rms)
-titanic_lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class, 
-                   data = train)
-titanic_lms
+lms <- lrm(survived ~ rcs(age)*gender + rcs(fare) + class, data = train)
+lms
 ```
 
 ### 3.2 Random forest model
@@ -151,7 +149,7 @@ exp_lms <- explain(___,
 
 ```{r ex4-solution}
 library(DALEX)
-exp_lms <- explain(titanic_lms,
+exp_lms <- explain(lms,
                    data = train,
                    y = train$survived,
                    label = "Logistic with splines")

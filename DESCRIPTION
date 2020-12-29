@@ -4,12 +4,14 @@ Title: Explanatory model analysis with DALEX
 Version: 0.1.5
 Author: Willy Tadema
 Maintainer: Willy Tadema <friesewoudloper@gmail.com>
-Description: Tutorial on explaining machine learning models with R and DALEX.
+Description: Tutorial on explaining predictive models with DALEX.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports: 
     learnr,
     DALEX,
-    ranger,
-    rms
+    randomForest,
+    rms,
+    gbm,
+    e1071
