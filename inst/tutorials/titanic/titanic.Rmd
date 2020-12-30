@@ -249,8 +249,6 @@ question("How does the prediction for Henry compare to that for Johnny D?",
 
 The models trained in the previous step have different internal structures and interfaces. We need a unified interface, so that we can compare the models. For this purpose we create _model explainer objects_. An explainer object contains all elements needed to create a model explanation.
 
-### 5.1 Create an explainer object
-
 We use the function `explain()` from the `DALEX` package to create an explainer object. The most frequently used function arguments are:
 
 * `model` (required), the model to be explained;
@@ -331,3 +329,79 @@ question("What version of the <code>e1071</code> package was used to create the 
          answer(create_answer())
 )
 ```
+
+## 6 Instance level
+
+A local explanation helps us understand the model response (prediction) at a single point (instance). There are different approaches to local explanations, which we will consider in turn.
+
+One approach is to analyze how the model’s prediction for a particular instance differs from the average prediction, and to which explanatory variables this difference should be attributed. It is often called the _variable attributions_ approach. Break-down plots, SHAP are examples of the variabel attributions approach.
+
+Another approach is to use a simpler glass-box model to approximate the black-box model around the point (instance) of interest. The black-box model is the model to be explained. The glass-box model describes the local behaviour of the model. Hence it is also called a _surrogate local model_. LIME
+
+Yet another approach is to investigate how changing the value of a single explanatory variable affects the response of the model for a particular instance. This is known as _What-if analysis_.
+
+### 6.1 Break-down plots
+
+HENRY en JOHNNY D vergelijken IN PLAATS VAN DIT
+Our models yield different predicted probabilities for survival for Johnny D. Where do these differences come from? We may gain more insight when we visualise the variable attributions for Johnny D's predictions. 
+
+_Break-down plots_ offer a solution. Break-down plots decompose the model’s prediction into contributions that are attributed to different explanatory variables.
+
+Let's create a break-down plot for Johnny D's prediction obtained from the random forest model.
+IETS MET predict_parts functie
+
+In the simplest call, the function requires three arguments:
+
+explainer - an explainer-object, created with function DALEX::explain();
+new_observation - an observation to be explained; it should be a data frame with a structure that matches the structure of the dataset used for fitting of the model;
+type - the method for calculation of variable attribution; the possible methods are "break_down" (the default), "shap", "oscillations", and "break_down_interactions".
+
+```{r ex14, exercise = TRUE, exercise.eval = TRUE}
+bd_rf <- predict_parts(titanic_rf_exp, johnny_d, type = "break_down")
+plot(bd_rf)
+```
+
+The first row in the break-down plot shows the overall mean value of predictions for the entire dataset. It is an estimate of the expected value of the model’s predictions over the distribution of all explanatory variables.
+
+The next rows present the changes in the mean prediction when fixing values of subsequent explanatory variables. They are the contributions attributed to the explanatory variables, and can be positive (green) or negative (red).
+
+The last row contains the prediction for the particular instance of interest. It is the sum of the overall mean value and the changes.
+
+```{r q3}
+question("What is the mean prediction for the entire dataset?",
+  answer(paste(round(bd_rf$contribution[1] * 100, 1), "%"), TRUE),
+  answer(paste(round(bd_rf$contribution[2] * 100, 1), "%")),
+  answer(paste(round(bd_rf$contribution[6] * 100, 1), "%")),
+  answer(paste(round(bd_rf$contribution[9] * 100, 1), "%"))
+)
+```
+
+```{r q4}
+question("What is the model's prediction for Johnny D?",
+  answer(paste(round(bd_rf$contribution[1] * 100, 1), "%")),
+  answer(paste(round(bd_rf$contribution[2] * 100, 1), "%")),
+  answer(paste(round(bd_rf$contribution[6] * 100, 1), "%")),
+  answer(paste(round(bd_rf$contribution[9] * 100, 1), "%"), TRUE)
+)
+```
+
+```{r q5}
+question("The model’s prediction for Johnny D is much higher than the mean prediction. Which explanatory variables contribute the most to this?",
+  answer("<i>class</i> and <i>age</i>", TRUE),
+  answer("<i>fare</i> and <i>gender</i>"),
+  answer("<i>class</i> and <i>gender</i>"),
+  answer("<i>age</i> and <i>fare</i>")
+)
+```
+
+It is important to note that, for models that include interactions, the part of the prediction attributed to a variable depends on the order in which one sets the values of the explanatory variables.
+An important issue is that BD plots may be misleading for models including interactions. This is because the plots show only the additive attributions. Thus, the choice of the ordering of the explanatory variables that is used in the calculation of the variable-importance measures is important.
+
+Verwijzen naar boek.
+
+### 6.2 Surrogate local model
+LIME
+
+### 6.3 Ceteris-paribus profiles
+
+## 7 Dataset level
