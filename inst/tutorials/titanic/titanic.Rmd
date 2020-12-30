@@ -10,6 +10,7 @@ description: "Learn to explore, explain and examine classification models with D
 
 ```{r setup, include=FALSE, message=FALSE}
 library(learnr)
+library(archivist)
 library(DALEX)
 library(rms)
 library(randomForest)
@@ -19,79 +20,53 @@ library(e1071)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FALSE)
 
 # Data
-titanic <- titanic_imputed
-titanic$survived[titanic$survived == 0] <- "no"
-titanic$survived[titanic$survived == 1] <- "yes"
-titanic$survived <- as.factor(titanic$survived)
-
-johnny_d <- data.frame(
-          class = factor("1st", 
-                         levels = c("1st", "2nd", "3rd", "deck crew", 
-                                    "engineering crew", "restaurant staff", 
-                                    "victualling crew")),
-          gender = factor("male", 
-                          levels = c("female", "male")),
-          age = 8, 
-          sibsp = 0, 
-          parch = 0, 
-          fare = 72,
-          embarked = factor("Southampton", 
-                            levels = c("Belfast","Cherbourg",
-                                       "Queenstown","Southampton")))
-
-henry <- data.frame(
-       class = factor("1st", 
-                      levels = c("1st", "2nd", "3rd", 
-                                 "deck crew", "engineering crew", 
-                                 "restaurant staff", "victualling crew")),
-       gender = factor("male", 
-                       levels = c("female", "male")),
-       age = 47, 
-       sibsp = 0, 
-       parch = 0, 
-       fare = 25,
-       embarked = factor("Cherbourg", 
-                         levels = c("Belfast", "Cherbourg","Queenstown","Southampton")))
+titanic  <- archivist::aread("pbiecek/models/27e5c")
+johnny_d <- archivist::aread("pbiecek/models/e3596")
+henry    <- archivist::aread("pbiecek/models/a6538")
  
 # Train models
-set.seed(1313)
-titanic_lrm <- lrm(survived == "yes" ~ class + gender + rcs(age) + sibsp + 
-                     parch + fare + embarked, data = titanic)
-titanic_rf <- randomForest(survived ~ class + gender + age + sibsp + parch + 
-                             fare + embarked, data = titanic)
-titanic_gbm <- gbm(survived == "yes" ~ class + gender + age + sibsp + parch + fare + embarked, 
-                   data = titanic, 
-                   n.trees = 15000, 
-                   distribution = "bernoulli")
-titanic_svm <- svm(survived == "yes" ~ class + gender + age + 
-                 sibsp + parch + fare + embarked, data = titanic, 
-                 type = "C-classification", probability = TRUE)
+titanic_lrm <- archivist::aread("pbiecek/models/58b24")
+titanic_rf  <- archivist::aread("pbiecek/models/4e0fc")
+titanic_gbm <- archivist::aread("pbiecek/models/b7078")
+titanic_svm <- archivist::aread("pbiecek/models/9c27f")
 
 # Create explainer objects
-train <- titanic_imputed
-exp_lms <- explain(titanic_lrm,
-                   data = train,
-                   y = train$survived,
-                   label = "Logistic with splines")
-exp_rf <- explain(titanic_rf,
-                  data = train[, 1:7],
-                  y = train$survived,
-                  label = "Random Forest")
-
-# Create model performance object
-mp_lms <- model_performance(exp_lms)
-mp_rf <- model_performance(exp_rf)
-
-# Instances
-joe <- titanic_imputed[1,]
-lucy <- data.frame(
-      class = factor("1st", levels = c("1st", "2nd", "3rd",
-                     "deck crew", "engineering crew",
-                     "restaurant staff", "victualling crew")),
-      gender = factor("female", levels = c("female", "male")),
-      age = 18, sibsp = 0, parch = 0, fare = 70,
-      embarked = factor("Southampton", levels = c("Belfast",
-                        "Cherbourg","Queenstown","Southampton")))
+titanic_lrm_exp <- explain(titanic_lrm,
+                           data = titanic[, -9],
+                           y = titanic$survived == "yes",
+                           label = "Logistic Regression",
+                           type = "classification",
+                           verbose = FALSE)
+titanic_rf_exp <- explain(model = titanic_rf, 
+                       data = titanic[, -9],
+                       y = titanic$survived == "yes", 
+                       label = "Random Forest",
+                       verbose = FALSE)
+titanic_gbm_exp <- explain(model = titanic_gbm, 
+                       data = titanic[, -9],
+                       y = titanic$survived == "yes", 
+                       label = "Generalized Boosted Regression",
+                       verbose = FALSE)
+titanic_svm_exp <- explain(model = titanic_svm, 
+                       data = titanic[, -9],
+                       y = titanic$survived == "yes", 
+                       label = "Support Vector Machine",
+                       verbose = FALSE)
+# 
+# # Create model performance object
+# mp_lms <- model_performance(exp_lms)
+# mp_rf <- model_performance(exp_rf)
+# 
+# # Instances
+# joe <- titanic_imputed[1,]
+# lucy <- data.frame(
+#       class = factor("1st", levels = c("1st", "2nd", "3rd",
+#                      "deck crew", "engineering crew",
+#                      "restaurant staff", "victualling crew")),
+#       gender = factor("female", levels = c("female", "male")),
+#       age = 18, sibsp = 0, parch = 0, fare = 70,
+#       embarked = factor("Southampton", levels = c("Belfast",
+#                         "Cherbourg","Queenstown","Southampton")))
 # 
 # bd_joe <- predict_parts(exp_rf, joe, type = "break_down_interactions")
 # bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down_interactions")
@@ -129,6 +104,7 @@ We will use the `titanic` dataset. It contains the details of a subset of person
 * *age*, the person's age in years; 
 * *class*, the class in which the passenger travelled, or the duty class of a crew member;
 * *embarked*, the harbor in which the person embarked on the ship;
+* *country*, person’s home country;
 * *fare*, the price of the ticket;
 * *sibsp*, the number of siblings/spouses aboard the ship;
 * *parch*, the number of parents/children aboard the ship;
@@ -154,19 +130,19 @@ Click **Run Code** to train the model.
 library(rms)
 titanic_lrm <- lrm(survived == "yes" ~ class + gender + rcs(age) + sibsp + parch + fare + embarked, 
                    data = titanic)
-cat("The logistic regression model was created.")
+cat("The logistic regression model has been created.")
 ```
 
 ### 3.2 Random forest model
 
-Next we train a random forest model. Insert the name of the dependent variable in the code chunk. Run the code. Click the **Solution** button to get help.
+We also create a random forest model. Insert the name of the dependent variable in the code chunk. Run the code. Click the **Solution** button to get help.
 
 ```{r ex3, exercise = TRUE}
 library(randomForest)
 set.seed(1313)
 titanic_rf <- randomForest(___ ~ class + gender + age + sibsp + parch + fare + embarked, 
                            data = titanic)
-cat("The random forest model was created.")
+cat("The random forest model has been created.")
 ```
 
 ```{r ex3-solution}
@@ -174,22 +150,26 @@ library(randomForest)
 set.seed(1313)
 titanic_rf <- randomForest(survived ~ class + gender + age + sibsp + parch + fare + embarked, 
                            data = titanic)
-cat("The random forest model was created.")
+cat("The random forest model has been created.")
 ```
 
 ### 3.3 Gradient boosting model
 
-```{r ex4, exercise = TRUE, exercise.timelimit = 90}
+Additionally, we create a gradient boosting model. This may take some time.
+
+```{r ex4, exercise = TRUE, exercise.timelimit = 120}
 library(gbm)
 set.seed(1313)
 titanic_gbm <- gbm(survived == "yes" ~ class + gender + age + sibsp + parch + fare + embarked, 
                    data = titanic, 
                    n.trees = 15000, 
                    distribution = "bernoulli")
-cat("The gradient boosting model was created.")
+cat("The gradient boosting model has been created.")
 ```
 
 ### 3.4 Support vector machine model
+
+Finally, we also create a support vector machine (SVM) model. 
 
 ```{r ex5, exercise = TRUE}
 library(e1071)
@@ -231,6 +211,8 @@ cat("Predicted probability of survival for Johnny D\n",
     sep = "")
 ```
 
+The predictions differ substantially. What causes these differences? Which model deserves our trust? Let's try and find the answers to these questions!
+
 ### 4.2 Henry
 
 Henry is an 47-year-old man who embarked in Cherbourg and travelled in the first class with no parents nor siblings, and with a ticket costing 25 pounds.
@@ -239,7 +221,7 @@ Henry is an 47-year-old man who embarked in Cherbourg and travelled in the first
 print(henry)
 ```
 
-For Henry we can also predict the odds of survival using different models.
+For Henry we also predict the odds of survival using different models.
 
 ```{r ex9, exercise = TRUE}
 pred_lrm <- predict(titanic_lrm, henry, type = "fitted")
@@ -255,11 +237,97 @@ cat("Predicted probability of survival for Henry\n",
     sep = "")
 ```
 
-```{r q5}
-question("How does the overall prediction for Henry compare to that for Johnny D?",
-  answer("Henry's predicted probability of survival is lower.", correct = TRUE),
-  answer("The predicted probabilities of survival for Henry and Johnny D are equal."),
-  answer("Henry's predicted probability of survival is higher.")
+```{r q1}
+question("How does the prediction for Henry compare to that for Johnny D?",
+  answer("Henry's predicted probability of survival is <i>lower</i>.", correct = TRUE),
+  answer("The predicted probabilities of survival for Henry and Johnny D are <i>equal</i>."),
+  answer("Henry's predicted probability of survival is <i>higher</i>.")
 )
 ```
 
+## 5 Models' explainers
+
+The models trained in the previous step have different internal structures and interfaces. We need a unified interface, so that we can compare the models. For this purpose we create _model explainer objects_. An explainer object contains all elements needed to create a model explanation.
+
+### 5.1 Create an explainer object
+
+We use the function `explain()` from the `DALEX` package to create an explainer object. The most frequently used function arguments are:
+
+* `model` (required), the model to be explained;
+* `data`, data to which the model is to be applied, be sure to remove the dependent variable; 
+* `y`, observed values of the dependent variable corresponding to the data given in the `data` object;
+* `label`, unique name of the model;
+* `type`, information about the type of the model, either `classification` or `regression`,
+* `verbose`, logical indicating whether diagnostic messages are to be printed.
+
+Let's start with an explainer for the logistic regression model. Complete the code block below and run it.
+
+```{r ex10, exercise = TRUE}
+library(DALEX)
+titanic_lrm_exp <- explain(___,
+                           data = titanic[, -9],
+                           y = ___$survived == "yes",
+                           label = "Logistic Regression",
+                           type = ___)
+```
+
+```{r ex10-solution}
+library(DALEX)
+titanic_lrm_exp <- explain(titanic_lrm,
+                           data = titanic[, -9],
+                           y = titanic$survived == "yes",
+                           label = "Logistic Regression",
+                           type = "classification")
+```
+
+Once the explainer has been created, we can retrieve basic information about the model.
+
+```{r ex11, exercise = TRUE}
+titanic_lrm_exp$model_info
+```
+
+We also create explainer objects for the other models.
+
+``````{r ex12, exercise = TRUE}
+titanic_rf_exp <- explain(model = titanic_rf, 
+                       data = titanic[, -9],
+                       y = titanic$survived == "yes", 
+                       label = "Random Forest",
+                       verbose = FALSE)
+titanic_gbm_exp <- explain(model = titanic_gbm, 
+                       data = titanic[, -9],
+                       y = titanic$survived == "yes", 
+                       label = "Generalized Boosted Regression",
+                       verbose = FALSE)
+titanic_svm_exp <- explain(model = titanic_svm, 
+                       data = titanic[, -9],
+                       y = titanic$survived == "yes", 
+                       label = "Support Vector Machine",
+                       verbose = FALSE)
+cat("The explainers have been created.")
+```
+
+Get the information for the support vector machine model from the appropriate explainer.
+
+```{r ex13, exercise = TRUE}
+
+```
+
+```{r ex13-solution}
+titanic_svm_exp$model_info
+```
+
+```{r q2}
+l <- unlist(strsplit(titanic_svm_exp$model_info$ver, "[.]"))
+create_answer <- function(){
+  index <- sample(1:3, 1)
+  l[index] <<- as.character(as.integer(l[index]) + 1)
+  return(paste(l, collapse = "."))
+}
+question("What version of the <code>e1071</code> package was used to create the support vector machine model?",
+         answer(create_answer()),
+         answer(titanic_svm_exp$model_info$ver, correct = TRUE),  
+         answer(create_answer()),
+         answer(create_answer())
+)
+```
