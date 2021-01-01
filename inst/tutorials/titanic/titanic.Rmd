@@ -133,9 +133,11 @@ titanic_lrm <- lrm(survived == "yes" ~ class + gender + rcs(age) + sibsp + parch
 cat("The logistic regression model has been created.")
 ```
 
+The logistic model is interpretable-by-design. We also create a number of so called 'black-box' models.
+
 ### 3.2 Random forest model
 
-We also create a random forest model. Insert the name of the dependent variable in the code chunk. Run the code. Click the **Solution** button to get help.
+Our first black-box model is a random forest model. Insert the name of the dependent variable in the code chunk. Run the code. Click the **Solution** button to get help.
 
 ```{r ex3, exercise = TRUE}
 library(randomForest)
@@ -247,22 +249,22 @@ question("How does the prediction for Henry compare to that for Johnny D?",
 
 ## 5 Models' explainers
 
-The models trained in the previous step have different internal structures and interfaces. We need a unified interface, so that we can compare the models. For this purpose we create _model explainer objects_. An explainer object contains all elements needed to create a model explanation.
+The models trained in the previous step have different internal structures and interfaces. We need a unified interface, so that we can easily obtain explanations and compare the models. For this purpose we create _model explainer objects_. An explainer object contains all elements needed to generate a model explanation.
 
-We use the function `explain()` from the `DALEX` package to create an explainer object. The most frequently used function arguments are:
+We use the function `explain()` from the `DALEX` package to create an explainer object. The function arguments that we use in this tutorial are:
 
 * `model` (required), the model to be explained;
 * `data`, data to which the model is to be applied, be sure to remove the dependent variable; 
 * `y`, observed values of the dependent variable corresponding to the data given in the `data` object;
 * `label`, unique name of the model;
-* `type`, information about the type of the model, either `classification` or `regression`,
+* `type`, information about the type of the model, either `"classification"` or `"regression"`,
 * `verbose`, logical indicating whether diagnostic messages are to be printed.
 
 Let's start with an explainer for the logistic regression model. Complete the code block below and run it.
 
 ```{r ex10, exercise = TRUE}
 library(DALEX)
-titanic_lrm_exp <- explain(___,
+titanic_lrm_exp <- explain(model = ___,
                            data = titanic[, -9],
                            y = ___$survived == "yes",
                            label = "Logistic Regression",
@@ -271,7 +273,7 @@ titanic_lrm_exp <- explain(___,
 
 ```{r ex10-solution}
 library(DALEX)
-titanic_lrm_exp <- explain(titanic_lrm,
+titanic_lrm_exp <- explain(model = titanic_lrm,
                            data = titanic[, -9],
                            y = titanic$survived == "yes",
                            label = "Logistic Regression",
@@ -330,78 +332,66 @@ question("What version of the <code>e1071</code> package was used to create the 
 )
 ```
 
-## 6 Instance level
+## 6 Instance level explanations
 
-A local explanation helps us understand the model response (prediction) at a single point (instance). There are different approaches to local explanations, which we will consider in turn.
+An _instance level explanation_ helps us understand the model response (prediction) at a single point (instance). Sometimes it's also called a _local explanation_. There are different approaches to instance level explanations, which we will consider in turn.
 
-One approach is to analyze how the model’s prediction for a particular instance differs from the average prediction, and to which explanatory variables this difference should be attributed. It is often called the _variable attributions_ approach. Break-down plots, SHAP are examples of the variabel attributions approach.
+One approach is to analyze how the model’s prediction for a particular instance differs from the average prediction, and to which explanatory variables this difference can be attributed. It is often called the _variable attributions_ approach. Break-down plots and SHAP are examples of the variable attributions approach.
 
-Another approach is to use a simpler glass-box model to approximate the black-box model around the point (instance) of interest. The black-box model is the model to be explained. The glass-box model describes the local behaviour of the model. Hence it is also called a _surrogate local model_. LIME
+Another approach is to use a simpler glass-box model to approximate the black-box model around the point (instance) of interest. The glass-box model describes the local behaviour of the model. It is interpretable-by-design. The glass-box model is also called _local surrogate model_. LIME is an example of this approach.
 
-Yet another approach is to investigate how changing the value of a single explanatory variable affects the response of the model for a particular instance. This is known as _What-if analysis_.
+Yet another approach is to investigate how changing the value of a single explanatory variable affects the response of the model for a particular instance. Ceteris-paribus profiles are very helpful in performing these _What-if analyses_.
 
 ### 6.1 Break-down plots
 
-HENRY en JOHNNY D vergelijken IN PLAATS VAN DIT
-Our models yield different predicted probabilities for survival for Johnny D. Where do these differences come from? We may gain more insight when we visualise the variable attributions for Johnny D's predictions. 
+Break-down plots decompose a model’s prediction into contributions that are attributed to different explanatory variables.
 
-_Break-down plots_ offer a solution. Break-down plots decompose the model’s prediction into contributions that are attributed to different explanatory variables.
+We create a break-down plot for Johnny D's prediction obtained from the random forest model. For this we use the function `predict_parts()`. The function requires three arguments:
 
-Let's create a break-down plot for Johnny D's prediction obtained from the random forest model.
-IETS MET predict_parts functie
-
-In the simplest call, the function requires three arguments:
-
-explainer - an explainer-object, created with function DALEX::explain();
-new_observation - an observation to be explained; it should be a data frame with a structure that matches the structure of the dataset used for fitting of the model;
-type - the method for calculation of variable attribution; the possible methods are "break_down" (the default), "shap", "oscillations", and "break_down_interactions".
+* `explainer`, an explainer object;
+* `new_observation`, an observation to be explained;
+* `type`, the method for calculation of variable attribution, for example `"break_down"`, `"break_down_interactions"` or `"shap"`.
 
 ```{r ex14, exercise = TRUE, exercise.eval = TRUE}
-bd_rf <- predict_parts(titanic_rf_exp, johnny_d, type = "break_down")
+bd_rf <- predict_parts(explainer = titanic_rf_exp, 
+                       new_observation = johnny_d, 
+                       type = "break_down")
 plot(bd_rf)
 ```
 
-The first row in the break-down plot shows the overall mean value of predictions for the entire dataset. It is an estimate of the expected value of the model’s predictions over the distribution of all explanatory variables.
+The first row in the break-down plot shows the overall mean value of predictions for the entire dataset. 
 
 The next rows present the changes in the mean prediction when fixing values of subsequent explanatory variables. They are the contributions attributed to the explanatory variables, and can be positive (green) or negative (red).
 
 The last row contains the prediction for the particular instance of interest. It is the sum of the overall mean value and the changes.
 
-```{r q3}
-question("What is the mean prediction for the entire dataset?",
-  answer(paste(round(bd_rf$contribution[1] * 100, 1), "%"), TRUE),
-  answer(paste(round(bd_rf$contribution[2] * 100, 1), "%")),
-  answer(paste(round(bd_rf$contribution[6] * 100, 1), "%")),
-  answer(paste(round(bd_rf$contribution[9] * 100, 1), "%"))
-)
-```
+The random forest model predicts a higher probability of survival for Johnny D than Henry. How can we explain this difference? Create a second break-down plot for Henry and compare it to Johnny D's in order to answer this question.
 
-```{r q4}
-question("What is the model's prediction for Johnny D?",
-  answer(paste(round(bd_rf$contribution[1] * 100, 1), "%")),
-  answer(paste(round(bd_rf$contribution[2] * 100, 1), "%")),
-  answer(paste(round(bd_rf$contribution[6] * 100, 1), "%")),
-  answer(paste(round(bd_rf$contribution[9] * 100, 1), "%"), TRUE)
-)
+```{r ex15, exercise = TRUE}
+
+```
+```{r ex15-solution}
+plot(predict_parts(titanic_rf_exp, johnny_d, type = "break_down"), 
+     title = "Break-down plot for Johnny D", min_max = c(0.2, 0.8))
+plot(predict_parts(titanic_rf_exp, henry, type = "break_down"), 
+     title = "Break-down plot for Henry", min_max = c(0.2, 0.8))
 ```
 
 ```{r q5}
-question("The model’s prediction for Johnny D is much higher than the mean prediction. Which explanatory variables contribute the most to this?",
-  answer("<i>class</i> and <i>age</i>", TRUE),
-  answer("<i>fare</i> and <i>gender</i>"),
-  answer("<i>class</i> and <i>gender</i>"),
-  answer("<i>age</i> and <i>fare</i>")
+question("According to these break-down plots, what is the main reason for the difference in predicted probability of survival?",
+  answer("Johnny D's ticket was more expensive than Henry's. "),
+  answer("Johnny D embarked in Southampton and Henry in Cherbourg."),
+  answer("Johnny D is a child and Henry middle-aged.", TRUE),
+  answer("Johnny D travels with his parents and Henry alone.")
 )
 ```
 
-It is important to note that, for models that include interactions, the part of the prediction attributed to a variable depends on the order in which one sets the values of the explanatory variables.
-An important issue is that BD plots may be misleading for models including interactions. This is because the plots show only the additive attributions. Thus, the choice of the ordering of the explanatory variables that is used in the calculation of the variable-importance measures is important.
+These break-down plots only show the <u>additive</u> attributions. They may be misleading for models including interactions, which may well be the case for our random forest model. In the presence of interactions, the computed value of the attribution depends on the order of explanatory variables that are used in calculations. To address this issue, we can create [break-down plots for interactions](http://ema.drwhy.ai/iBreakDown.html) or use methods like SHAP or LIME.
 
-Verwijzen naar boek.
+### 6.2 SHAP
 
-### 6.2 Surrogate local model
-LIME
+### 6.3 LIME
 
-### 6.3 Ceteris-paribus profiles
+### 6.4 Ceteris-paribus profiles
 
-## 7 Dataset level
+## 7 Dataset level explanations
