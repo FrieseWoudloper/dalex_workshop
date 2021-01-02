@@ -12,6 +12,7 @@ description: "Learn to explore, explain and examine classification models with D
 library(learnr)
 library(archivist)
 library(DALEX)
+library(DALEXtra)
 library(rms)
 library(randomForest)
 library(gbm)
@@ -52,26 +53,6 @@ titanic_svm_exp <- explain(model = titanic_svm,
                        y = titanic$survived == "yes", 
                        label = "Support Vector Machine",
                        verbose = FALSE)
-# 
-# # Create model performance object
-# mp_lms <- model_performance(exp_lms)
-# mp_rf <- model_performance(exp_rf)
-# 
-# # Instances
-# joe <- titanic_imputed[1,]
-# lucy <- data.frame(
-#       class = factor("1st", levels = c("1st", "2nd", "3rd",
-#                      "deck crew", "engineering crew",
-#                      "restaurant staff", "victualling crew")),
-#       gender = factor("female", levels = c("female", "male")),
-#       age = 18, sibsp = 0, parch = 0, fare = 70,
-#       embarked = factor("Southampton", levels = c("Belfast",
-#                         "Cherbourg","Queenstown","Southampton")))
-# 
-# bd_joe <- predict_parts(exp_rf, joe, type = "break_down_interactions")
-# bd_lucy <- predict_parts(exp_rf, lucy, type = "break_down_interactions")
-# sh_joe_rf <- predict_parts(exp_rf, joe, type = "shap")
-# sh_joe_lms <- predict_parts(exp_lms, joe, type = "shap")
 ```
 
 ## 1 Welcome
@@ -428,21 +409,16 @@ The first step is to generate artificial data. This is often done by using pertu
 
 Because the Titanic dataset is low-dimensional, we would probably not use LIME in practice. LIME is usually only applied for high-dimensional data, like text and images. However, as an example, we use the LIME method to explain Johnny D's prediction for the random forest model. 
 
-We use the implementation in the `lime` package and specify the maximum number of explanatory variables to be selected (`n_features = 3`) and the number of artificial data points (`n_permutations = 1000`)
+We use the `predict_surrogate` function from the `DALEXtra` package. It is a wrapper for the LIME implementation in the `localModel` package. We specify the number of artificial data points in the `size` argument of the function call.
 
 ```{r ex17, exercise = TRUE}
-set.seed(1)
 library(DALEXtra)
-library(lime)
-model_type.dalex_explainer <- DALEXtra::model_type.dalex_explainer
-predict_model.dalex_explainer <- DALEXtra::predict_model.dalex_explainer
-
-lime_johnny <- predict_surrogate(explainer = titanic_rf_exp, 
-                                 new_observation = johnny_d, 
-                                 n_features = 3, 
-                                 n_permutations = 1000,
-                                 type = "lime")
-plot(lime_johnny)
+locMod_rf <- predict_surrogate(explainer = titanic_rf_exp, 
+                               new_observation = johnny_d,
+                               size = 1000,
+                               seed = 1,
+                               type = "localModel")
+plot(locMod_rf)
 ```
 
 ### 6.4 Ceteris-paribus profiles
