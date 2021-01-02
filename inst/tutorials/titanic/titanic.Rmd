@@ -338,7 +338,7 @@ An _instance level explanation_ helps us understand the model response (predicti
 
 One approach is to analyze how the model’s prediction for a particular instance differs from the average prediction, and to which explanatory variables this difference can be attributed. It is often called the _variable attributions_ approach. Break-down plots and SHAP are examples of the variable attributions approach.
 
-Another approach is to use a simpler glass-box model to approximate the black-box model around the point (instance) of interest. The glass-box model describes the local behaviour of the model. It is interpretable-by-design. The glass-box model is also called _local surrogate model_. LIME is an example of this approach.
+Another approach is to use a simpler glass-box model to approximate the black-box model around the point (instance) of interest. The glass-box model is interpretable-by-design. It describes the local behaviour of the model. LIME is an example of this approach.
 
 Yet another approach is to investigate how changing the value of a single explanatory variable affects the response of the model for a particular instance. Ceteris-paribus profiles are very helpful in performing these _What-if analyses_.
 
@@ -361,7 +361,7 @@ plot(bd_rf)
 
 The first row in the break-down plot shows the overall mean value of predictions for the entire dataset. 
 
-The next rows present the changes in the mean prediction when fixing values of subsequent explanatory variables. They are the contributions attributed to the explanatory variables, and can be positive (green) or negative (red).
+The next rows present the changes in the mean prediction when fixing values of subsequent explanatory variables. They are the contributions attributed to the explanatory variables, and can be positive (green) or negative (red). 
 
 The last row contains the prediction for the particular instance of interest. It is the sum of the overall mean value and the changes.
 
@@ -379,18 +379,71 @@ plot(predict_parts(titanic_rf_exp, henry, type = "break_down"),
 
 ```{r q5}
 question("According to these break-down plots, what is the main reason for the difference in predicted probability of survival?",
-  answer("Johnny D's ticket was more expensive than Henry's. "),
+  answer("Johnny D's ticket was more expensive than Henry's."),
   answer("Johnny D embarked in Southampton and Henry in Cherbourg."),
   answer("Johnny D is a child and Henry middle-aged.", TRUE),
   answer("Johnny D travels with his parents and Henry alone.")
 )
 ```
 
-These break-down plots only show the <u>additive</u> attributions. They may be misleading for models including interactions, which may well be the case for our random forest model. In the presence of interactions, the computed value of the attribution depends on the order of explanatory variables that are used in calculations. To address this issue, we can create [break-down plots for interactions](http://ema.drwhy.ai/iBreakDown.html) or use methods like SHAP or LIME.
+These break-down plots only show the <u>additive</u> attributions. They may be misleading for models including interactions, which is the case for our random forest model. In the presence of interactions, the size and sign of contributions depend upon the ordering of the explanatory variables that are used in calculations. To address this issue, we can create [break-down plots for interactions](http://ema.drwhy.ai/iBreakDown.html) or use methods like SHAP or LIME.
 
 ### 6.2 SHAP
 
+<b>SH</b>apley <b>A</b>dditive ex<b>P</b>lanations (SHAP) are based on _Shapley values_ in cooperative game theory. They are a way to address the ordering issue mentioned in the previous section. The idea is to average the value of a variable's contribution over all possible orderings. 
+
+Complement the code below and create an explanation for Johnny D's prediction using Shapley values. It takes too much time to calculate the Shapely values for _all_ orderings. So we compute them for 25 random orderings.
+
+```{r ex16, exercise = TRUE, exercise.timelimit = 600}
+set.seed(1313)
+sh_rf <- predict_parts(explainer = ___, 
+                       new_observation = ___, 
+                       type = "shap",
+                       B = 25)
+plot(sh_rf, show_boxplots = FALSE)
+```
+
+```{r ex16-solution}
+set.seed(1313)
+sh_rf <- predict_parts(explainer = titanic_rf_exp, 
+                       new_observation = johnny_d, 
+                       type = "shap",
+                       B = 25)
+plot(sh_rf, show_boxplots = FALSE)
+```
+
+```{r q6}
+question("What are practical limitations of SHAP?",
+  answer("Exact computation of Shapley values takes a lot of computing time."),
+  answer("It is necessary to have access to the training data or another representative dataset."),
+  answer("Both statements are true.", TRUE)
+)
+```
+
 ### 6.3 LIME
+
+Break-down plots and Shapley values are not well-suited for models with a very large number of explanatory variables. The reason is that all variables in the model are used to explain the prediction. If we need _sparse_ explanations <b>L</b>ocal <b>I</b>nterpretable <b>M</b>odel-agnostic <b>E</b>xplanations (LIME) are a better approach.
+
+The first step is to generate artificial data. This is often done by using perturbations of the instance of interest. Then a glass-box model is fitted to the artificial data. The glass-box model locally approximates the more complex black-box model. The simpler model, with a smaller number of explanatory variables, makes it easier to explain predictions. 
+
+Because the Titanic dataset is low-dimensional, we would probably not use LIME in practice. LIME is usually only applied for high-dimensional data, like text and images. However, as an example, we use the LIME method to explain Johnny D's prediction for the random forest model. 
+
+We use the implementation in the `lime` package and specify the maximum number of explanatory variables to be selected (`n_features = 3`) and the number of artificial data points (`n_permutations = 1000`)
+
+```{r ex17, exercise = TRUE}
+set.seed(1)
+library(DALEXtra)
+library(lime)
+model_type.dalex_explainer <- DALEXtra::model_type.dalex_explainer
+predict_model.dalex_explainer <- DALEXtra::predict_model.dalex_explainer
+
+lime_johnny <- predict_surrogate(explainer = titanic_rf_exp, 
+                                 new_observation = johnny_d, 
+                                 n_features = 3, 
+                                 n_permutations = 1000,
+                                 type = "lime")
+plot(lime_johnny)
+```
 
 ### 6.4 Ceteris-paribus profiles
 
