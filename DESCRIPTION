@@ -17,6 +17,10 @@ Imports:
     rms (>= 5.1.3),
     gbm (>= 2.1.5),
     e1071 (>= 1.7.3),
-    localModel
+    localModel (>= 0.5),
+    ggplot2
 Depends: 
     R (>= 2.10)
+Remotes:
+    ModelOriented/DALEX,
+    ModelOriented/localModel

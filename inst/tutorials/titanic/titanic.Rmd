@@ -390,10 +390,10 @@ plot(shap_rf, show_boxplots = FALSE)
 ```
 
 ```{r q6}
-question("What are practical limitations of SHAP?",
-  answer("Exact computation of Shapley values takes a lot of computing time."),
-  answer("It is necessary to have access to the training data or another representative dataset."),
-  answer("Both statements are true.", TRUE)
+question("What are practical limitations of SHAP? Select all answers that apply.",
+  answer("Exact computation of Shapley values takes a lot of computing time.", TRUE),
+  answer("There is no SHAP implementation in Python."),
+  answer("It is necessary to have access to the training data or another representative dataset.", TRUE)
 )
 ```
 
@@ -401,15 +401,21 @@ question("What are practical limitations of SHAP?",
 
 Break-down plots and Shapley values are not well-suited for models with a very large number of explanatory variables. Because all variables are used to explain the prediction, it gets too complicated. If we need _sparse_ explanations <b>L</b>ocal <b>I</b>nterpretable <b>M</b>odel-agnostic <b>E</b>xplanations (LIME) are a better approach.
 
-The first step is often to segment and sort continuous data into bins to obtain interpretable categorical data. Then artificial data is generated. This is done by using perturbations of the instance of interest. Next a linear model is fitted to the artificial data. This interpretable glass-box model locally approximates the black-box model. The glass-box model has a smaller number of explanatory variables then the black-box model.
+The first step is to create a lower-dimensional data space. Continuous data is segmented and sorted into bins. Categorical data is aggregated.
 
-Since the Titanic dataset is low-dimensional, we probably wouldn't use LIME in this case. LIME is usually only applied for high-dimensional data, like text and images. However, as an example, we use the LIME method to explain Johnny D's prediction for the random forest model. 
+The next step is to generate artificial data. This is done by using perturbations of the instance of interest. 
 
-We use the `predict_surrogate` function from the `DALEXtra` package. It is a wrapper for the LIME implementation in the `localModel` package. We specify the number of artificial data points in the `size` argument of the function call.
+Finally a linear model is fitted to the artificial data. It is a glass-box model that locally approximates the black-box model. To further limit the number of variables in the glass-box model, regularization techniques like LASSO are used.
 
-ALLE ARGUMENZTEn NOEMEN, OOK SEED. EN ZELFDE LAYOUT ALS EERDER
+Since the Titanic dataset is already low-dimensional, we probably wouldn't use LIME. The method is usually only applied to models for high-dimensional data, like text and images. However, as an example, we use the LIME method to explain Johnny D's prediction from the random forest model. 
 
-OOK IETS OVER DE EerStE STAP: OMZETTEN VAN CONTINUE VARIABELE NAAR BINAIRE.
+For that we need to call the `predict_surrogate` function from the `DALEXtra` package. We use the following function arguments:
+
+* `explainer`, an explainer object;
+* `new_observation`, an observation to be explained;
+* `size`, the number of artificial data points to be generated;
+* `seed`, the seed for the random number generator;
+* `type`, the implementation of the LIME method to be used, for example `"localModal"`. 
 
 ```{r ex17, exercise = TRUE}
 library(DALEXtra)
@@ -420,10 +426,15 @@ lime_rf <- predict_surrogate(explainer = titanic_rf_exp,
                              type = "localModel")
 plot(lime_rf)
 ```
+Note that the explanation only contains three variables. Also `age` has been transformed into a binary variable.
+
+```{r ex20, exercise = TRUE}
+plot_interpretable_feature(lime_rf, "age")
+```
 
 ```{r q7}
 question("Why is the glass-box model easier to explain than the black-box model? Select all answers that apply.",
-  answer("It is linear model, which is inherently interpretable.", TRUE),
+  answer("It is a linear model, which is interpretable-by-design.", TRUE),
   answer("It has fewer explanatory variables and therefore we get a sparser explanation.", TRUE),
   answer("It more accurately fits the training data.")
 )
@@ -439,7 +450,7 @@ For creating ceteris-paribus profiles, we need the function `predict_profile()`.
 * `new_observation`, an observation to be explained,
 * `variables`, names of the explanatory variables for which centeris-paribus profiles are to be calculated. 
 
-Let's some ceteris-paribus profiles for Johnny D's prediction from the random forest model.
+Let's create some ceteris-paribus profiles for Johnny D's prediction from the random forest model.
 ```{r ex18, exercise = TRUE}
 cp_titanic_rf <- predict_profile(explainer = titanic_rf_exp, 
                                  new_observation = johnny_d,
