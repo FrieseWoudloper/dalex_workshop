@@ -1,16 +1,15 @@
 # dalextutorial
 
-## Install and run
+## Install
 
 Install `dalextutorial` from Github:
 
 ```
-install.packages(c("learnr", "remotes"))
+install.packages("remotes")
 remotes::install_github("friesewoudloper/dalextutorial")
 ```
 
-
-If you get the question below, it is probably best to chose `1` and update all packages.
+If you get the question below, it is probably best to choose `1` and update all packages.
 
 ```
 These packages have more recent versions available.
@@ -20,8 +19,10 @@ Which would you like to update?
  1: All  
 ```
 
+## Run
+
 Now, you are ready to go:
 
 ```
-learnr::run_tutorial("ema_with_dalex", "dalextutorial")
+learnr::run_tutorial("titanic", "dalextutorial")
 ```
