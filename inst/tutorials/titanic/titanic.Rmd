@@ -53,6 +53,13 @@ titanic_svm_exp <- explain(model = titanic_svm,
                        y = titanic$survived == "yes", 
                        label = "Support Vector Machine",
                        verbose = FALSE)
+
+# Explanations
+lime_rf <- predict_surrogate(explainer = titanic_rf_exp, 
+                             new_observation = johnny_d,
+                             size = 1000,
+                             seed = 1,
+                             type = "localModel")
 ```
 
 ## 1 Welcome
@@ -407,9 +414,9 @@ The next step is to generate artificial data. This is done by using perturbation
 
 Finally a linear model is fitted to the artificial data. It is a glass-box model that locally approximates the black-box model. To further limit the number of variables in the glass-box model, regularization techniques like LASSO are used.
 
-Since the Titanic dataset is already low-dimensional, we probably wouldn't use LIME. The method is usually only applied to models for high-dimensional data, like text and images. However, as an example, we use the LIME method to explain Johnny D's prediction from the random forest model. 
+Since the Titanic dataset is already low-dimensional, we probably wouldn't use LIME. The method is usually only applied to models for high-dimensional data, like text and images. 
 
-For that we need to call the `predict_surrogate` function from the `DALEXtra` package. We use the following function arguments:
+However, as an example, we use the LIME method to explain Johnny D's prediction from the random forest model. For that we need to call the `predict_surrogate` function from the `DALEXtra` package. We use the following function arguments:
 
 * `explainer`, an explainer object;
 * `new_observation`, an observation to be explained;
@@ -426,16 +433,12 @@ lime_rf <- predict_surrogate(explainer = titanic_rf_exp,
                              type = "localModel")
 plot(lime_rf)
 ```
-Note that the explanation only contains three variables. Also `age` has been transformed into a binary variable.
-
-```{r ex20, exercise = TRUE}
-plot_interpretable_feature(lime_rf, "age")
-```
 
 ```{r q7}
 question("Why is the glass-box model easier to explain than the black-box model? Select all answers that apply.",
   answer("It is a linear model, which is interpretable-by-design.", TRUE),
-  answer("It has fewer explanatory variables and therefore we get a sparser explanation.", TRUE),
+  answer("It has fewer explanatory variables and thus is a sparser model.", TRUE),
+  answer("It has been trained on a lower-dimensional dataset.", TRUE),
   answer("It more accurately fits the training data.")
 )
 ```
@@ -451,7 +454,7 @@ For creating ceteris-paribus profiles, we need the function `predict_profile()`.
 * `variables`, names of the explanatory variables for which centeris-paribus profiles are to be calculated. 
 
 Let's create some ceteris-paribus profiles for Johnny D's prediction from the random forest model.
-```{r ex18, exercise = TRUE}
+```{r ex20, exercise = TRUE}
 cp_titanic_rf <- predict_profile(explainer = titanic_rf_exp, 
                                  new_observation = johnny_d,
                                  variables = c("age", "class"))
@@ -478,7 +481,7 @@ question("It is better for Johnny not to sail as a passenger, but as a crew memb
 )         
 ```
 
-```{r ex19, exercise = TRUE}
+```{r ex21, exercise = TRUE}
 library(ggplot2)
 cp_titanic_lrm <- predict_profile(titanic_lrm_exp, henry)
 cp_titanic_rf  <- predict_profile(titanic_rf_exp,  henry)
