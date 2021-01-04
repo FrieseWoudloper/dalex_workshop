@@ -5,7 +5,7 @@ output:
     progressive: true
     allow_skip: true
 runtime: shiny_prerendered
-description: "Learn to explore, explain and examine classification models with DALEX using the Titanic dataset."
+description: "Learn to explore, explain and examine regression models with DALEX using the apartments dataset."
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
@@ -22,8 +22,6 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FA
 
 # Data
 titanic  <- archivist::aread("pbiecek/models/27e5c")
-johnny_d <- archivist::aread("pbiecek/models/e3596")
-henry    <- archivist::aread("pbiecek/models/a6538")
  
 # Train models
 titanic_lrm <- archivist::aread("pbiecek/models/58b24")
@@ -69,17 +67,19 @@ We will cover:
 
 We will only use _model-agnostic_ methods. These methods treat machine learning models as black boxes. They do not need access to model internals. They work by changing the input of the model and measuring changes in the prediction output.
 
-This tutorial focuses solely on explainability of classification models. However, DALEX can just as easily be used to explain regression models.
+This tutorial focuses solely on explainability of regression models. However, DALEX can just as easily be used to explain classification models.
 
 This tutorial is based on the book [Explanatory Model Analysis](https://pbiecek.github.io/ema/) by Przemyslaw Biecek and Tomasz Burzykowski. It is a great resource and highly recommended. You can read it for free online. The book will also be available in print from early 2021.
+
+It also includes code examples from the excellent blog series by Anna Kozak about [Basic XAI with DALEX](https://medium.com/responsibleml/tagged/basic-xai). 
 
 ### 1.2 Pre-requisites 
 We assume you have basic knowledge of R, specifically of training machine learning models.
 
 Let's get started!
 
-## 2 Titanic dataset
-We will use the `titanic` dataset. It contains the details of a subset of persons aboard the Titanic when it sank: 
+## 2 Apartments dataset
+We will use the `apartments` dataset. It contains prices of apartments in Warsaw. 
 
 * *gender*, the person's gender;
 * *age*, the person's age in years; 
@@ -261,31 +261,10 @@ titanic_lrm_exp <- explain(model = titanic_lrm,
                            type = "classification")
 ```
 
-An explainer object is a list with all elements needed to generate model explanations. It contains the model, features, ground truth labels, predictions and more. 
-
-In the code chunk below, use the code completion functionality to select the list element containing the name and version of the package that was used to train the model. 
+An explainer object contains all elements needed to generate model explanations, for example the model, features, ground truth labels and predictions. We can also retrieve basic information about the model from an explainer.
 
 ```{r ex11, exercise = TRUE}
-titanic_lrm_exp$___
-```
-
-```{r ex11-solution}
 titanic_lrm_exp$model_info
-```
-
-```{r q2}
-l <- unlist(strsplit(titanic_lrm_exp$model_info$ver, "[.]"))
-create_answer <- function(){
-  index <- sample(1:3, 1)
-  l[index] <<- as.character(as.integer(l[index]) + 1)
-  return(paste(l, collapse = "."))
-}
-question("What version of the <code>rms</code> package was used to create the logistic regression model?",
-         answer(create_answer()),
-         answer(titanic_lrm_exp$model_info$ver, correct = TRUE),  
-         answer(create_answer()),
-         answer(create_answer())
-)
 ```
 
 We also create explainer objects for the other models.
@@ -307,6 +286,31 @@ titanic_svm_exp <- explain(model = titanic_svm,
                        label = "Support Vector Machine",
                        verbose = FALSE)
 cat("The explainers have been created.")
+```
+
+Get the information for the support vector machine model from the appropriate explainer.
+
+```{r ex13, exercise = TRUE}
+
+```
+
+```{r ex13-solution}
+titanic_svm_exp$model_info
+```
+
+```{r q2}
+l <- unlist(strsplit(titanic_svm_exp$model_info$ver, "[.]"))
+create_answer <- function(){
+  index <- sample(1:3, 1)
+  l[index] <<- as.character(as.integer(l[index]) + 1)
+  return(paste(l, collapse = "."))
+}
+question("What version of the <code>e1071</code> package was used to create the support vector machine model?",
+         answer(create_answer()),
+         answer(titanic_svm_exp$model_info$ver, correct = TRUE),  
+         answer(create_answer()),
+         answer(create_answer())
+)
 ```
 
 ## 6 Instance level explanations
@@ -373,20 +377,20 @@ Complement the code below and create an explanation for Johnny D's prediction us
 
 ```{r ex16, exercise = TRUE, exercise.timelimit = 600}
 set.seed(1313)
-shap_rf <- predict_parts(explainer = ___, 
+sh_rf <- predict_parts(explainer = ___, 
                        new_observation = ___, 
                        type = "shap",
                        B = 25)
-plot(shap_rf, show_boxplots = FALSE)
+plot(sh_rf, show_boxplots = FALSE)
 ```
 
 ```{r ex16-solution}
 set.seed(1313)
-shap_rf <- predict_parts(explainer = titanic_rf_exp, 
-                         new_observation = johnny_d, 
-                         type = "shap",
-                         B = 25)
-plot(shap_rf, show_boxplots = FALSE)
+sh_rf <- predict_parts(explainer = titanic_rf_exp, 
+                       new_observation = johnny_d, 
+                       type = "shap",
+                       B = 25)
+plot(sh_rf, show_boxplots = FALSE)
 ```
 
 ```{r q6}
@@ -399,80 +403,30 @@ question("What are practical limitations of SHAP?",
 
 ### 6.3 LIME
 
-Break-down plots and Shapley values are not well-suited for models with a very large number of explanatory variables. Because all variables are used to explain the prediction, it gets too complicated. If we need _sparse_ explanations <b>L</b>ocal <b>I</b>nterpretable <b>M</b>odel-agnostic <b>E</b>xplanations (LIME) are a better approach.
+Break-down plots and Shapley values are not well-suited for models with a very large number of explanatory variables. The reason is that all variables in the model are used to explain the prediction. If we need _sparse_ explanations <b>L</b>ocal <b>I</b>nterpretable <b>M</b>odel-agnostic <b>E</b>xplanations (LIME) are a better approach.
 
-The first step is often to segment and sort continuous data into bins to obtain interpretable categorical data. Then artificial data is generated. This is done by using perturbations of the instance of interest. Next a linear model is fitted to the artificial data. This interpretable glass-box model locally approximates the black-box model. The glass-box model has a smaller number of explanatory variables then the black-box model.
+The first step is to generate artificial data. This is often done by using perturbations of the instance of interest. Then a glass-box model is fitted to the artificial data. The glass-box model locally approximates the more complex black-box model. The simpler model, with a smaller number of explanatory variables, makes it easier to explain predictions. 
 
 Since the Titanic dataset is low-dimensional, we probably wouldn't use LIME in this case. LIME is usually only applied for high-dimensional data, like text and images. However, as an example, we use the LIME method to explain Johnny D's prediction for the random forest model. 
 
 We use the `predict_surrogate` function from the `DALEXtra` package. It is a wrapper for the LIME implementation in the `localModel` package. We specify the number of artificial data points in the `size` argument of the function call.
 
-ALLE ARGUMENZTEn NOEMEN, OOK SEED. EN ZELFDE LAYOUT ALS EERDER
-
-OOK IETS OVER DE EerStE STAP: OMZETTEN VAN CONTINUE VARIABELE NAAR BINAIRE.
-
 ```{r ex17, exercise = TRUE}
 library(DALEXtra)
-lime_rf <- predict_surrogate(explainer = titanic_rf_exp, 
-                             new_observation = johnny_d,
-                             size = 1000,
-                             seed = 1,
-                             type = "localModel")
-plot(lime_rf)
+locMod_rf <- predict_surrogate(explainer = titanic_rf_exp, 
+                               new_observation = johnny_d,
+                               size = 1000,
+                               seed = 1,
+                               type = "localModel")
+plot(locMod_rf)
 ```
 
-```{r q7}
-question("Why is the glass-box model easier to explain than the black-box model? Select all answers that apply.",
-  answer("It is linear model, which is inherently interpretable.", TRUE),
-  answer("It has fewer explanatory variables and therefore we get a sparser explanation.", TRUE),
-  answer("It more accurately fits the training data.")
-)
-```
+Note that this explanation is based on only three variables.
 
 ### 6.4 Ceteris-paribus profiles
 
-Ceteris-paribus profiles help us understand how changes in the values of the explanatory variable affect the model’s predictions, assuming that the values of all other variables remain the same.
+Voorbeeld met continue data en categorische data.
 
-For creating ceteris-paribus profiles, we need the function `predict_profile()`. In this tutorial we use the following arguments:
-
-* `explainer`, an explainer object;
-* `new_observation`, an observation to be explained,
-* `variables`, names of the explanatory variables for which centeris-paribus profiles are to be calculated. 
-
-Let's some ceteris-paribus profiles for Johnny D's prediction from the random forest model.
-```{r ex18, exercise = TRUE}
-cp_titanic_rf <- predict_profile(explainer = titanic_rf_exp, 
-                                 new_observation = johnny_d,
-                                 variables = c("age", "class"))
-plot(cp_titanic_rf, variables = "age")  
-plot(cp_titanic_rf, variables = "class", variable_type = "categorical", categorical_type = "bars")
-```
-
-```{r q8}
-question("Pretend Johnny D can change his age. At what age are his odds of survival lowest, all else being equal?",
-  answer("1"),
-  answer("3"),
-  answer("41", TRUE),
-  answer("65")
-)
-```
-
-
-```{r q9}
-question("It is better for Johnny not to sail as a passenger, but as a crew member. Where should he land a job?",
-  answer("In the restaurant."),
-  answer("In the engine room."),
-  answer("In the launderette."),
-  answer("On deck.", TRUE)
-)         
-```
-
-```{r ex19, exercise = TRUE}
-library(ggplot2)
-cp_titanic_lrm <- predict_profile(titanic_lrm_exp, henry)
-cp_titanic_rf  <- predict_profile(titanic_rf_exp,  henry)
-plot(cp_titanic_lrm, cp_titanic_rf, color = "_label_",  
-     variables = "age") + ggtitle("Ceteris-paribus profiles for Henry", "")
-```
+Vergelijken van twee modellen
 
 ## 7 Dataset level explanations
