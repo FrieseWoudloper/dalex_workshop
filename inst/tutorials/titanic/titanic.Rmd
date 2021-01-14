@@ -22,8 +22,14 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FA
 
 # Data
 titanic  <- archivist::aread("pbiecek/models/27e5c")
-johnny_d <- archivist::aread("pbiecek/models/e3596")
-henry    <- archivist::aread("pbiecek/models/a6538")
+johnny_d <- titanic[0, c(-5, -9)]
+johnny_d[1, ] <- list(gender = "male", age = 8, class = "1st",
+                      embarked = "Southampton", fare = 72, 
+                      sibsp = 0, parch = 0)
+henry <- titanic[0, c(-5, -9)]
+henry[1, ] <- list(gender = "male", age = 47, class = "1st",
+                   embarked = "Cherbourg", fare = 25, 
+                   sibsp = 0, parch = 0)
  
 # Train models
 titanic_lrm <- archivist::aread("pbiecek/models/58b24")
@@ -424,7 +430,7 @@ However, as an example, we use the LIME method to explain Johnny D's prediction 
 * `seed`, the seed for the random number generator;
 * `type`, the implementation of the LIME method to be used, for example `"localModal"`. 
 
-```{r ex17, exercise = TRUE}
+```{r ex17, exercise = TRUE, exercise.eval = TRUE}
 library(DALEXtra)
 lime_rf <- predict_surrogate(explainer = titanic_rf_exp, 
                              new_observation = johnny_d,
@@ -438,7 +444,7 @@ plot(lime_rf)
 question("Why is the glass-box model easier to explain than the black-box model? Select all answers that apply.",
   answer("It is a linear model, which is interpretable-by-design.", TRUE),
   answer("It has fewer explanatory variables and thus is a sparser model.", TRUE),
-  answer("It has been trained on a lower-dimensional dataset.", TRUE),
+  answer("It is derived from a lower-dimensional dataset.", TRUE),
   answer("It more accurately fits the training data.")
 )
 ```
@@ -481,12 +487,20 @@ question("It is better for Johnny not to sail as a passenger, but as a crew memb
 )         
 ```
 
+One of the most interesting uses of the ceteris-paribus profiles is the comparison for two or more of models. Let's create a plot that compares Henry's ceteris-paribus profiles for the variables `age` and `fare` for both the logistic regression and random forest model. 
+
 ```{r ex21, exercise = TRUE}
 library(ggplot2)
 cp_titanic_lrm <- predict_profile(titanic_lrm_exp, henry)
 cp_titanic_rf  <- predict_profile(titanic_rf_exp,  henry)
 plot(cp_titanic_lrm, cp_titanic_rf, color = "_label_",  
-     variables = "age") + ggtitle("Ceteris-paribus profiles for Henry", "")
+     variables = c("age", "fare")) + ggtitle("Ceteris-paribus profiles for Henry", "")
 ```
+
+```{r q10}
+question("Which model picks up more subtle patterns in the data?",
+  answer("Logistic regression model"),
+  answer("Random forest model", TRUE)
+)   
 
 ## 7 Dataset level explanations
