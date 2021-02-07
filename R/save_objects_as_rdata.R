@@ -61,12 +61,11 @@ titanic_svm_exp <- DALEX::explain(model = titanic_svm,
                                   label = "Support Vector Machine",
                                   verbose = FALSE)
 
-# library(localModel)
-# lime_rf <- predict_surrogate(explainer = titanic_rf_exp,
-#                              new_observation = johnny_d,
-#                              size = 1000,
-#                              seed = 1,
-#                              type = "localModel")
+lime_rf <- DALEXtra::predict_surrogate(explainer = titanic_rf_exp,
+                                       new_observation = johnny_d,
+                                       size = 1000,
+                                       seed = 1,
+                                       type = "localModel")
 
 save(titanic,
      johnny_d,
@@ -79,6 +78,7 @@ save(titanic,
      titanic_rf_exp,
      titanic_gbm_exp,
      titanic_svm_exp,
+     lime_rf,
      file = file.path("inst", "extdata", "objects.Rdata"))
 
 rm(list = ls())
