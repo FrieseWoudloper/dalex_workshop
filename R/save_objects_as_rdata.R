@@ -1,5 +1,7 @@
-library(archivist)
-titanic  <- aread("pbiecek/models/27e5c")
+rm(list = ls())
+
+# Imputed titanic dataset copied from github.com/pbiecek/models/gallery
+load(file.path("data", "27e5c637a56f3e5180d7808b2b68d436.rda"))
 
 johnny_d <- titanic[0, c(-5, -9)]
 johnny_d[1, ] <- list(gender = "male", age = 8, class = "1st",
@@ -11,55 +13,53 @@ henry[1, ] <- list(gender = "male", age = 47, class = "1st",
                    embarked = "Cherbourg", fare = 25,
                    sibsp = 0, parch = 0)
 
-library(rms)
-titanic_lrm <- lrm(survived == "yes" ~ class + gender + rcs(age) +
-                     sibsp + parch + fare + embarked, data = titanic)
+titanic_lrm <- rms::lrm(survived == "yes" ~ class + gender + rms::rcs(age) +
+                                sibsp + parch + fare + embarked,
+                        data = titanic)
 
-library(randomForest)
 set.seed(1313)
-titanic_rf <- randomForest(survived ~ class + gender + age + sibsp + parch +
-                             fare + embarked, data = titanic)
+titanic_rf <- randomForest::randomForest(survived ~ class + gender + age +
+                                                 sibsp + parch + fare + embarked,
+                                         data = titanic)
 
-library(gbm)
 set.seed(1313)
-titanic_gbm <- gbm(survived == "yes" ~ class + gender + age + sibsp + parch +
-                     fare + embarked, data = titanic, n.trees = 15000,
-                     distribution = "bernoulli")
+titanic_gbm <- gbm::gbm(survived == "yes" ~ class + gender + age + sibsp +
+                                parch + fare + embarked,
+                        data = titanic,
+                        n.trees = 15000,
+                        distribution = "bernoulli")
 
-library(e1071)
 set.seed(1313)
-titanic_svm <- svm(survived == "yes" ~ class + gender + age + sibsp + parch +
-                     fare + embarked, data = titanic, type = "C-classification",
-                     probability = TRUE)
+titanic_svm <- e1071::svm(survived == "yes" ~ class + gender + age + sibsp +
+                                  parch + fare + embarked,
+                          data = titanic,
+                          type = "C-classification",
+                          probability = TRUE)
 
-library(DALEX)
-titanic_lrm_exp <- explain(titanic_lrm,
-                           data = titanic[, -9],
-                           y = titanic$survived == "yes",
-                           label = "Logistic Regression",
-                           type = "classification",
-                           verbose = FALSE)
+titanic_lrm_exp <- DALEX::explain(titanic_lrm,
+                                  data = titanic[, -9],
+                                  y = titanic$survived == "yes",
+                                  label = "Logistic Regression",
+                                  type = "classification",
+                                  verbose = FALSE)
 
-titanic_rf_exp <- explain(model = titanic_rf,
-                          data = titanic[, -9],
-                          y = titanic$survived == "yes",
-                          label = "Random Forest",
-                          verbose = FALSE)
-# usethis::use_data(titanic_rf_exp, overwrite = TRUE)
+titanic_rf_exp <- DALEX::explain(model = titanic_rf,
+                                 data = titanic[, -9],
+                                 y = titanic$survived == "yes",
+                                 label = "Random Forest",
+                                 verbose = FALSE)
 
-titanic_gbm_exp <- explain(model = titanic_gbm,
-                           data = titanic[, -9],
-                           y = titanic$survived == "yes",
-                           label = "Generalized Boosted Regression",
-                           verbose = FALSE)
-# usethis::use_data(titanic_gbm_exp, overwrite = TRUE)
+titanic_gbm_exp <- DALEX::explain(model = titanic_gbm,
+                                  data = titanic[, -9],
+                                  y = titanic$survived == "yes",
+                                  label = "Generalized Boosted Regression",
+                                  verbose = FALSE)
 
-titanic_svm_exp <- explain(model = titanic_svm,
-                           data = titanic[, -9],
-                           y = titanic$survived == "yes",
-                           label = "Support Vector Machine",
-                           verbose = FALSE)
-# usethis::use_data(titanic_svm_exp, overwrite = TRUE)
+titanic_svm_exp <- DALEX::explain(model = titanic_svm,
+                                  data = titanic[, -9],
+                                  y = titanic$survived == "yes",
+                                  label = "Support Vector Machine",
+                                  verbose = FALSE)
 
 # library(localModel)
 # lime_rf <- predict_surrogate(explainer = titanic_rf_exp,
@@ -81,3 +81,5 @@ save(titanic,
      titanic_gbm_exp,
      titanic_svm_exp,
      file = file.path("inst", "extdata", "objects.Rdata"))
+
+rm(list = ls())
