@@ -10,7 +10,6 @@ description: "Learn to explore, explain and examine classification models with D
 
 ```{r setup, include=FALSE, message=FALSE}
 library(learnr)
-library(archivist)
 library(DALEX)
 library(DALEXtra)
 library(rms)
@@ -20,52 +19,9 @@ library(e1071)
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FALSE)
 
-# Data
-titanic  <- archivist::aread("pbiecek/models/27e5c")
-johnny_d <- titanic[0, c(-5, -9)]
-johnny_d[1, ] <- list(gender = "male", age = 8, class = "1st",
-                      embarked = "Southampton", fare = 72, 
-                      sibsp = 0, parch = 0)
-henry <- titanic[0, c(-5, -9)]
-henry[1, ] <- list(gender = "male", age = 47, class = "1st",
-                   embarked = "Cherbourg", fare = 25, 
-                   sibsp = 0, parch = 0)
- 
-# Train models
-titanic_lrm <- archivist::aread("pbiecek/models/58b24")
-titanic_rf  <- archivist::aread("pbiecek/models/4e0fc")
-titanic_gbm <- archivist::aread("pbiecek/models/b7078")
-titanic_svm <- archivist::aread("pbiecek/models/9c27f")
-
-# Create explainer objects
-titanic_lrm_exp <- explain(titanic_lrm,
-                           data = titanic[, -9],
-                           y = titanic$survived == "yes",
-                           label = "Logistic Regression",
-                           type = "classification",
-                           verbose = FALSE)
-titanic_rf_exp <- explain(model = titanic_rf, 
-                       data = titanic[, -9],
-                       y = titanic$survived == "yes", 
-                       label = "Random Forest",
-                       verbose = FALSE)
-titanic_gbm_exp <- explain(model = titanic_gbm, 
-                       data = titanic[, -9],
-                       y = titanic$survived == "yes", 
-                       label = "Generalized Boosted Regression",
-                       verbose = FALSE)
-titanic_svm_exp <- explain(model = titanic_svm, 
-                       data = titanic[, -9],
-                       y = titanic$survived == "yes", 
-                       label = "Support Vector Machine",
-                       verbose = FALSE)
-
-# Explanations
-lime_rf <- predict_surrogate(explainer = titanic_rf_exp, 
-                             new_observation = johnny_d,
-                             size = 1000,
-                             seed = 1,
-                             type = "localModel")
+dir <- system.file("extdata", package = "dalextutorial")
+load(file.path(dir, "objects.Rdata"))
+rm(dir)
 ```
 
 ## 1 Welcome
